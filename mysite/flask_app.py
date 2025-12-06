@@ -30,7 +30,7 @@ if not os.path.exists(USERS_FILE):
 MOBILE_UA_RE = re.compile(r"android|iphone|ipad|ipod|blackberry|iemobile|windows phone|opera mini|mobile", re.I)
 
 client = OpenAI(
-    api_key="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",
+    api_key="",
     base_url="https://openrouter.ai/api/v1"
 )
 
