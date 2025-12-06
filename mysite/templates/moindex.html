@@ -1,0 +1,895 @@
+<!--
+  Copyright (c) 2025 Hurairah
+  All Rights Reserved. Proprietary Software.
+  Legal matters handled by parent/guardian until age 18.
+  Governed by Pakistan law (Rawalpindi jurisdiction).
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HurairahGPT (Mobile)</title>
+    <link
+      rel="icon"
+      type="image/png"
+      href="{{ url_for('static', filename='logo.png') }}"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg-dark: #020617;
+        --bg-light: #f9fafb;
+        --text-dark: #e5e7eb;
+        --text-light: #111827;
+        --muted-dark: #9ca3af;
+        --muted-light: #6b7280;
+        --accent: #6366f1;
+        --accent-soft: rgba(99, 102, 241, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+          sans-serif;
+        background: radial-gradient(
+            circle at 0 0,
+            rgba(56, 189, 248, 0.25),
+            transparent 55%
+          ),
+          radial-gradient(
+            circle at 100% 100%,
+            rgba(168, 85, 247, 0.25),
+            transparent 60%
+          ),
+          var(--bg-dark);
+        color: var(--text-dark);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      body.light {
+        background: radial-gradient(
+            circle at 0 0,
+            rgba(56, 189, 248, 0.18),
+            transparent 55%
+          ),
+          radial-gradient(
+            circle at 100% 100%,
+            rgba(168, 85, 247, 0.18),
+            transparent 60%
+          ),
+          var(--bg-light);
+        color: var(--text-light);
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px 8px;
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        background: rgba(15, 23, 42, 0.85);
+        border-bottom: 1px solid rgba(30, 64, 175, 0.9);
+      }
+
+      body.light header {
+        background: rgba(249, 250, 251, 0.92);
+        border-bottom-color: rgba(148, 163, 184, 0.7);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .brand-logo {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        background: conic-gradient(
+          from 140deg,
+          #6366f1,
+          #ec4899,
+          #f97316,
+          #22c55e,
+          #6366f1
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #f9fafb;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .brand-text {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .brand-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      .brand-sub {
+        font-size: 0.7rem;
+        color: var(--muted-dark);
+      }
+
+      body.light .brand-sub {
+        color: var(--muted-light);
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(51, 65, 85, 0.9);
+        color: #e5e7eb;
+      }
+
+      body.light .pill {
+        background: rgba(255, 255, 255, 0.95);
+        border-color: rgba(148, 163, 184, 0.9);
+        color: #111827;
+      }
+
+      .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
+      }
+
+      .icon-btn {
+        border: none;
+        background: rgba(15, 23, 42, 0.96);
+        color: #e5e7eb;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 0.8rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.9);
+      }
+
+      body.light .icon-btn {
+        background: rgba(255, 255, 255, 0.96);
+        color: #111827;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+      }
+
+      .icon-btn span.icon {
+        font-size: 1rem;
+      }
+
+      .chat-box {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(148, 163, 184, 0.9) transparent;
+      }
+
+      .chat-box::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .chat-box::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, #6366f1, #ec4899);
+        border-radius: 999px;
+      }
+
+      .message {
+        padding: 10px 13px;
+        border-radius: 14px;
+        max-width: 78%;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+        font-size: 0.92rem;
+        line-height: 1.5;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.75);
+        animation: fadeIn 0.18s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(4px) scale(0.98);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .message.user {
+        background: linear-gradient(135deg, #6366f1, #ec4899);
+        align-self: flex-end;
+        color: #f9fafb;
+        border-bottom-right-radius: 6px;
+      }
+
+      .message.bot {
+        background: radial-gradient(
+            circle at 0 0,
+            rgba(30, 64, 175, 0.95),
+            rgba(15, 23, 42, 0.98)
+          ),
+          #020617;
+        align-self: flex-start;
+        color: #e5e7eb;
+        border: 1px solid rgba(30, 64, 175, 0.85);
+        border-bottom-left-radius: 6px;
+      }
+
+      body.light .message.bot {
+        background: #ffffff;
+        color: #111827;
+        border-color: rgba(148, 163, 184, 0.8);
+        box-shadow: 0 8px 20px rgba(148, 163, 184, 0.4);
+      }
+
+      form {
+        display: flex;
+        gap: 8px;
+        padding: 10px 10px 12px;
+        background: rgba(15, 23, 42, 0.92);
+        border-top: 1px solid rgba(30, 64, 175, 0.9);
+        align-items: flex-end;
+      }
+
+      body.light form {
+        background: rgba(249, 250, 251, 0.96);
+        border-top-color: rgba(148, 163, 184, 0.8);
+      }
+
+      textarea {
+        flex: 1;
+        height: 64px;
+        max-height: 120px;
+        resize: vertical;
+        border-radius: 12px;
+        padding: 10px 11px;
+        border: 1px solid rgba(51, 65, 85, 0.9);
+        background: rgba(15, 23, 42, 0.96);
+        color: inherit;
+        font-size: 0.92rem;
+        outline: none;
+      }
+
+      body.light textarea {
+        background: #ffffff;
+        border-color: rgba(148, 163, 184, 0.85);
+      }
+
+      textarea::placeholder {
+        color: var(--muted-dark);
+      }
+
+      body.light textarea::placeholder {
+        color: var(--muted-light);
+      }
+
+      button[type="submit"] {
+        border: none;
+        border-radius: 999px;
+        padding: 10px 16px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: linear-gradient(135deg, #6366f1, #ec4899);
+        color: #f9fafb;
+        box-shadow: 0 16px 32px rgba(76, 29, 149, 0.8);
+      }
+
+      .voice-btn {
+        border: none;
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-size: 1.2rem;
+        background: rgba(15, 23, 42, 0.96);
+        color: #e5e7eb;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.9);
+        transition: all 0.2s ease;
+      }
+
+      body.light .voice-btn {
+        background: rgba(255, 255, 255, 0.96);
+        color: #111827;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
+      }
+
+      .voice-btn:hover {
+        transform: scale(1.05);
+      }
+
+      .voice-btn.recording {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+
+      .typing-indicator {
+        font-style: italic;
+        font-size: 0.8rem;
+        color: var(--muted-dark);
+      }
+
+      body.light .typing-indicator {
+        color: var(--muted-light);
+      }
+
+      /* slide-out menu for actions and personality */
+      .side-menu {
+        position: fixed;
+        top: 0;
+        right: -260px;
+        width: 240px;
+        height: 100%;
+        background: rgba(15, 23, 42, 0.96);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        color: #e5e7eb;
+        padding: 18px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: right 0.25s ease;
+        z-index: 40;
+        border-left: 1px solid rgba(30, 64, 175, 0.9);
+      }
+
+      body.light .side-menu {
+        background: rgba(249, 250, 251, 0.98);
+        color: #111827;
+        border-left-color: rgba(148, 163, 184, 0.9);
+      }
+
+      .side-menu.open {
+        right: 0;
+      }
+
+      .side-menu h2 {
+        font-size: 0.95rem;
+        margin: 0 0 4px;
+      }
+
+      .side-menu small {
+        font-size: 0.75rem;
+        color: var(--muted-dark);
+        margin-bottom: 10px;
+      }
+
+      body.light .side-menu small {
+        color: var(--muted-light);
+      }
+
+      .side-btn,
+      .side-menu select {
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(51, 65, 85, 0.9);
+        border-radius: 999px;
+        padding: 9px 12px;
+        color: inherit;
+        font-size: 0.85rem;
+      }
+
+      body.light .side-btn,
+      body.light .side-menu select {
+        background: rgba(255, 255, 255, 0.96);
+        border-color: rgba(148, 163, 184, 0.9);
+      }
+
+      .side-footer {
+        margin-top: auto;
+        font-size: 0.74rem;
+        color: var(--muted-dark);
+      }
+
+      body.light .side-footer {
+        color: var(--muted-light);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <div class="brand-logo">H</div>
+        <div class="brand-text">
+          <span class="brand-title">HurairahGPT</span>
+          <span class="brand-sub">Mobile chat</span>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="pill">
+          <span class="status-dot"></span>
+          <span>Online</span>
+        </div>
+        <button id="menuToggle" class="icon-btn" type="button">
+          <span class="icon">☰</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="chat-box" id="chat-box"></div>
+    <form id="chat-form">
+      <textarea
+        id="message-input"
+        placeholder="Ask Hurairah anything…"
+      ></textarea>
+      <button type="button" id="voice-input-btn" class="voice-btn" title="Voice input">
+        <span>🎤</span>
+      </button>
+      <button type="submit">
+        <span>Send</span>
+      </button>
+    </form>
+
+    <div class="side-menu" id="sideMenu">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <h2>Controls</h2>
+        <button
+          class="icon-btn"
+          id="closeMenu"
+          type="button"
+          style="padding:4px 8px;font-size:0.8rem;"
+        >
+          ✕
+        </button>
+      </div>
+      <small>Theme & tools</small>
+      <button class="side-btn" onclick="toggleDarkMode()" id="darkBtn" type="button">
+        ☀️ Light Mode
+      </button>
+      <button class="side-btn" onclick="clearChat()" type="button">
+        🧹 Clear chat
+      </button>
+      <button class="side-btn" onclick="exportChat()" type="button">
+        📥 Export chat
+      </button>
+
+      <small style="margin-top:6px;">Personality</small>
+      <select id="personality-mobile">
+        <option value="default">Default</option>
+        <option value="funny">Funny</option>
+        <option value="islamic">Islamic</option>
+        <option value="coder">Coder</option>
+      </select>
+
+      <small style="margin-top:10px;">Chat Sessions</small>
+      <div id="sessions-list-mobile" style="display:flex;flex-direction:column;gap:6px;max-height:150px;overflow-y:auto;margin-bottom:6px;"></div>
+      <button class="side-btn" id="new-session-btn-mobile" type="button" style="margin-top:4px;">
+        ➕ New Chat
+      </button>
+
+      {% if gmail %}
+      <div
+        style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(148,163,184,0.4);"
+        class="profile"
+      >
+        <span style="font-size:0.85rem;font-weight:500;">{{ gmail }}</span>
+        <button
+          class="side-btn"
+          style="margin-top:4px;"
+          type="button"
+          onclick="window.location.href='/logout'"
+        >
+          ↩ Logout
+        </button>
+      </div>
+      {% else %}
+      <button
+        class="side-btn"
+        style="margin-top:10px;"
+        type="button"
+        onclick="window.location.href='/login'"
+      >
+        🔑 Login
+      </button>
+      {% endif %}
+
+      <div class="side-footer">
+        Tip: Press Enter to send, Shift+Enter for a new line.
+      </div>
+    </div>
+
+  <audio id="send-sound" src="{{ url_for('static', filename='send.mp3') }}"></audio>
+  <audio id="receive-sound" src="{{ url_for('static', filename='receive.mp3') }}"></audio>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    const history = {{ history | tojson }};
+    const sessions = {{ (sessions or {}) | tojson }};
+    const activeSession = {{ (active_session or '') | tojson }};
+    const chatBox = document.getElementById("chat-box");
+    const chatForm = document.getElementById("chat-form");
+    const messageInput = document.getElementById("message-input");
+    const sessionsListMobile = document.getElementById("sessions-list-mobile");
+    const newSessionBtnMobile = document.getElementById("new-session-btn-mobile");
+    const voiceInputBtn = document.getElementById("voice-input-btn");
+    const sendSound = document.getElementById("send-sound");
+    const receiveSound = document.getElementById("receive-sound");
+    
+    // Voice input/output setup
+    let recognition = null;
+    let isRecording = false;
+    let synth = window.speechSynthesis;
+    let currentUtterance = null;
+    
+    // Initialize speech recognition
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        messageInput.value = transcript;
+        messageInput.focus();
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        voiceInputBtn.classList.remove('recording');
+        isRecording = false;
+      };
+      
+      recognition.onend = () => {
+        voiceInputBtn.classList.remove('recording');
+        isRecording = false;
+      };
+    } else {
+      voiceInputBtn.style.display = 'none';
+    }
+    
+    // Voice input button handler
+    voiceInputBtn.addEventListener('click', () => {
+      if (!recognition) return;
+      
+      if (isRecording) {
+        recognition.stop();
+        isRecording = false;
+        voiceInputBtn.classList.remove('recording');
+      } else {
+        recognition.start();
+        isRecording = true;
+        voiceInputBtn.classList.add('recording');
+      }
+    });
+
+    function appendMessage(msg, sender) {
+      const div = document.createElement("div");
+      div.className = "message " + sender;
+      div.innerHTML = marked.parseInline(msg);
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      
+      // Play sound effects
+      try {
+        if (sender === 'user') {
+          sendSound.play().catch(e => console.warn('Sound play failed:', e));
+        } else {
+          receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+        }
+      } catch (e) {
+        console.warn('Sound error:', e);
+      }
+    }
+    
+    // Text-to-speech function
+    function speakText(text) {
+      if (!synth) return;
+      
+      // Stop any current speech
+      if (currentUtterance) {
+        synth.cancel();
+      }
+      
+      // Clean text (remove markdown formatting for speech)
+      const cleanText = text.replace(/[#*_`\[\]()]/g, '').trim();
+      if (!cleanText) return;
+      
+      currentUtterance = new SpeechSynthesisUtterance(cleanText);
+      currentUtterance.lang = 'en-US';
+      currentUtterance.rate = 1.0;
+      currentUtterance.pitch = 1.0;
+      currentUtterance.volume = 0.8;
+      
+      synth.speak(currentUtterance);
+      
+      currentUtterance.onend = () => {
+        currentUtterance = null;
+      };
+    }
+
+    chatForm.addEventListener("submit", async e => {
+      e.preventDefault();
+      const msg = messageInput.value.trim();
+      if (!msg) return;
+      appendMessage(msg, "user");
+      messageInput.value = "";
+      
+      // Create a bot message element for streaming
+      const botMessageDiv = document.createElement("div");
+      botMessageDiv.className = "message bot";
+      botMessageDiv.innerHTML = "";
+      chatBox.appendChild(botMessageDiv);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      
+      let fullResponse = "";
+      let shouldSpeak = true; // Flag to speak only once when complete
+      
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ message: msg, stream: true })
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                if (data.chunk) {
+                  fullResponse += data.chunk;
+                  botMessageDiv.innerHTML = marked.parseInline(fullResponse);
+                  chatBox.scrollTop = chatBox.scrollHeight;
+                }
+                if (data.done) {
+                  if (data.error) {
+                    botMessageDiv.innerHTML = marked.parseInline(data.error);
+                    fullResponse = data.error;
+                  } else if (data.full_response) {
+                    fullResponse = data.full_response;
+                    botMessageDiv.innerHTML = marked.parseInline(fullResponse);
+                  }
+                  
+                  // Play receive sound and speak response
+                  try {
+                    receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+                  } catch (e) {
+                    console.warn('Sound error:', e);
+                  }
+                  
+                  // Speak the response
+                  if (shouldSpeak && fullResponse) {
+                    speakText(fullResponse);
+                    shouldSpeak = false;
+                  }
+                  break;
+                }
+              } catch (e) {
+                console.warn("Failed to parse SSE data:", e);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        botMessageDiv.innerHTML = marked.parseInline("Network error. Please try again.");
+        console.error("Streaming error:", err);
+        try {
+          receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+        } catch (e) {
+          console.warn('Sound error:', e);
+        }
+      }
+    });
+
+    function clearChat() {
+      chatBox.innerHTML = "";
+      fetch("/chat", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ message: "__CLEAR__" }) })
+        .then(r=>r.json()).then(d=>appendMessage(d.response,"bot"));
+    }
+    function exportChat() {
+      const text = Array.from(chatBox.querySelectorAll(".message"))
+        .map(m=>m.textContent).join("\n");
+      const blob = new Blob([text], {type:"text/plain"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "HurairahGPT_Chat.txt";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    function toggleDarkMode() {
+      document.body.classList.toggle("light");
+      const light = document.body.classList.contains("light");
+      document.getElementById("darkBtn").textContent = light ? "🌙 Dark Mode" : "☀️ Light Mode";
+      localStorage.setItem("theme", light ? "light" : "dark");
+      fetch("/theme", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ theme: light ? "light":"dark" }) });
+    }
+    document.getElementById("personality-mobile").addEventListener("change", async function() {
+      await fetch("/personality", {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ personality: this.value })
+      });
+    });
+
+    // Session management
+    let currentSessions = sessions || {};
+    let currentActiveSession = activeSession;
+
+    function renderSessionsMobile() {
+      sessionsListMobile.innerHTML = '';
+      Object.entries(currentSessions).forEach(([id, session]) => {
+        const item = document.createElement('div');
+        item.className = 'side-btn';
+        item.style.cssText = 'text-align:left;position:relative;padding-right:32px;';
+        if (id === currentActiveSession) {
+          item.style.background = 'rgba(99, 102, 241, 0.2)';
+          item.style.borderColor = 'rgba(99, 102, 241, 0.6)';
+        }
+        item.innerHTML = `
+          <span>${session.name}</span>
+          ${id !== currentActiveSession ? `<button class="icon-btn" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:2px 6px;font-size:0.7rem;" data-action="delete" data-id="${id}" title="Delete">🗑</button>` : ''}
+        `;
+        item.addEventListener('click', (e) => {
+          if (!e.target.closest('button')) {
+            switchSessionMobile(id);
+          }
+        });
+        sessionsListMobile.appendChild(item);
+      });
+
+      sessionsListMobile.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const sessionId = btn.dataset.id;
+          if (confirm('Delete this chat session?')) {
+            deleteSessionMobile(sessionId);
+          }
+        });
+      });
+    }
+
+    async function createSessionMobile(name) {
+      try {
+        const res = await fetch('/sessions/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name || `Chat ${Object.keys(currentSessions).length + 1}` })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentSessions = data.sessions;
+          currentActiveSession = data.session_id;
+          renderSessionsMobile();
+          chatBox.innerHTML = '';
+          sideMenu.classList.remove('open');
+          return true;
+        }
+      } catch (e) {
+        console.error('Failed to create session', e);
+      }
+      return false;
+    }
+
+    async function switchSessionMobile(sessionId) {
+      if (sessionId === currentActiveSession) {
+        sideMenu.classList.remove('open');
+        return;
+      }
+      try {
+        const res = await fetch('/sessions/switch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentActiveSession = sessionId;
+          currentSessions = data.sessions;
+          renderSessionsMobile();
+          chatBox.innerHTML = '';
+          data.history.forEach(h => {
+            appendMessage(h.content, h.sender || 'bot');
+          });
+          chatBox.scrollTop = chatBox.scrollHeight;
+          sideMenu.classList.remove('open');
+        }
+      } catch (e) {
+        console.error('Failed to switch session', e);
+      }
+    }
+
+    async function deleteSessionMobile(sessionId) {
+      try {
+        const res = await fetch('/sessions/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: sessionId })
+        });
+        const data = await res.json();
+        if (data.success) {
+          currentSessions = data.sessions;
+          currentActiveSession = data.active_session;
+          renderSessionsMobile();
+          chatBox.innerHTML = '';
+          data.history.forEach(h => {
+            appendMessage(h.content, h.sender || 'bot');
+          });
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+      } catch (e) {
+        console.error('Failed to delete session', e);
+      }
+    }
+
+    newSessionBtnMobile.addEventListener('click', () => {
+      createSessionMobile();
+    });
+
+    window.addEventListener("DOMContentLoaded", ()=>{
+      const theme = localStorage.getItem("theme");
+      if(theme==="light") document.body.classList.add("light");
+      renderSessionsMobile();
+      history.forEach(({sender, content}) => appendMessage(content, sender));
+    });
+
+    const menuBtn = document.getElementById("menuToggle");
+    const sideMenu = document.getElementById("sideMenu");
+    const closeBtn = document.getElementById("closeMenu");
+    menuBtn.onclick = ()=> sideMenu.classList.add("open");
+    closeBtn.onclick = ()=> sideMenu.classList.remove("open");
+    document.addEventListener("click", e=>{
+      if(sideMenu.classList.contains("open") && !sideMenu.contains(e.target) && e.target!==menuBtn)
+        sideMenu.classList.remove("open");
+    });
+  </script>
+</body>
+</html>

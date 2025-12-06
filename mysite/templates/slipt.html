@@ -1,0 +1,138 @@
+<!--
+  Copyright (c) 2025 Hurairah
+  All Rights Reserved. Proprietary Software.
+  Legal matters handled by parent/guardian until age 18.
+  Governed by Pakistan law (Rawalpindi jurisdiction).
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HurairahGPT</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: radial-gradient(circle at 0 0, rgba(56,189,248,0.35), transparent 55%),
+                  radial-gradient(circle at 100% 100%, rgba(168,85,247,0.35), transparent 60%),
+                  #020617;
+      color: #e5e7eb;
+      font-size: 1rem;
+      gap: 18px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .logo-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      background: conic-gradient(from 140deg,#6366f1,#ec4899,#f97316,#22c55e,#6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #f9fafb;
+      font-size: 0.9rem;
+    }
+
+    .tagline {
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+
+    @keyframes orbit {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .orbit {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 1px dashed rgba(148,163,184,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 8px;
+    }
+
+    .orbit-core {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      background: linear-gradient(135deg,#6366f1,#ec4899);
+      box-shadow: 0 0 20px rgba(129,140,248,0.9);
+    }
+
+    .orbit-dots {
+      position: absolute;
+      inset: -4px;
+      border-radius: 999px;
+      animation: orbit 2.4s linear infinite;
+    }
+
+    .orbit-dots::before,
+    .orbit-dots::after {
+      content: "";
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #f97316;
+      box-shadow: 0 0 12px rgba(249,115,22,0.9);
+    }
+    .orbit-dots::before { top: -2px; left: 50%; transform: translateX(-50%); }
+    .orbit-dots::after { bottom: -2px; left: 50%; transform: translateX(-50%); }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #9ca3af;
+    }
+  </style>
+
+  <script>
+    setTimeout(function() {
+      const ua = navigator.userAgent.toLowerCase();
+      const isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(ua);
+      if (isMobile) {
+        window.location.href = "/moindex";
+      } else {
+        window.location.href = "/main";
+      }
+    }, 900);
+  </script>
+</head>
+<body>
+  <div class="orbit">
+    <div class="orbit-core"></div>
+    <div class="orbit-dots"></div>
+  </div>
+  <div class="logo-row">
+    <div class="logo-badge">H</div>
+    <span>HurairahGPT</span>
+  </div>
+  <div class="tagline">Warming up your personal AI workspace…</div>
+  <div class="hint">Auto‑detecting device and loading the best chat experience.</div>
+</body>
+</html>

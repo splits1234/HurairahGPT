@@ -1,0 +1,135 @@
+
+<!--
+  Copyright (c) 2025 Hurairah
+  All Rights Reserved. Proprietary Software.
+  Legal matters handled by parent/guardian until age 18.
+  Governed by Pakistan law (Rawalpindi jurisdiction).
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HurairahGPT — Forgot Password</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+    <style>
+      /* Reuse same style variables as login.html, but with refreshed layout */
+      :root {
+        --bg-dark: #121212;
+        --text-dark: #f1f1f1;
+        --input-bg-dark: rgba(30, 30, 30, 0.7);
+        --input-border-dark: #444;
+        --btn-bg-dark: #3a78f2;
+        --btn-hover-dark: #2c63c7;
+        --note-text-dark: #aaa;
+        --blur-bg-dark: rgba(0 0 0 / 0.4);
+        --error-color: #e53935;
+      }
+      body {
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: radial-gradient(
+            circle at 0 0,
+            rgba(56, 189, 248, 0.25),
+            transparent 55%
+          ),
+          radial-gradient(
+            circle at 100% 100%,
+            rgba(168, 85, 247, 0.25),
+            transparent 60%
+          ),
+          var(--bg-dark);
+        color: var(--text-dark);
+        height: 100vh;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        padding: 16px;
+        box-sizing: border-box;
+      }
+      .login-container {
+        background: var(--input-bg-dark);
+        backdrop-filter: saturate(180%) blur(20px);
+        border-radius: 18px;
+        padding: 40px 32px 34px;
+        width: 100%;
+        max-width: 430px;
+        box-shadow: 0 32px 80px rgb(0 0 0 / 0.7);
+        border: 1px solid rgba(148, 163, 184, 0.45);
+      }
+      .logo {
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:10px;
+        margin-bottom:18px;
+      }
+      .logo-badge {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        background: conic-gradient(
+          from 140deg,
+          #6366f1,
+          #ec4899,
+          #f97316,
+          #22c55e,
+          #6366f1
+        );
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:#f9fafb;
+        font-size:0.8rem;
+        font-weight:700;
+      }
+      .logo-text-main {
+        font-size: 1.05rem;
+        font-weight:700;
+      }
+      form { display:flex; flex-direction:column; gap:18px; }
+      input[type="email"] {
+        background: transparent;
+        border: 1.5px solid var(--input-border-dark);
+        border-radius:10px;
+        padding:14px;
+        font-size:15px;
+        color:var(--text-dark);
+      }
+      button {
+        background: var(--btn-bg-dark);
+        color:white;
+        padding:12px;
+        border-radius:10px;
+        border:none;
+        font-weight:600;
+        cursor:pointer;
+      }
+      .info { font-size:14px; color:var(--note-text-dark); text-align:center; margin-top:8px; }
+      .error { color:var(--error-color); font-size:13px; text-align:center; }
+      .success { color:#7ed957; font-size:13px; text-align:center; }
+      a.back { display:block; text-align:center; margin-top:12px; color:var(--btn-bg-dark); text-decoration:none; font-weight:600; }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="logo">HurairahGPT</div>
+
+      {% if error %}
+        <div class="error">{{ error }}</div>
+      {% endif %}
+
+      {% if sent %}
+        <div class="success">If that email exists in our system, a message has been sent.</div>
+        <a class="back" href="/login">Back to login</a>
+      {% else %}
+        <form method="POST" action="/forgot" novalidate>
+          <input type="email" name="email" placeholder="Email address" required />
+          <button type="submit">Send my password</button>
+        </form>
+        <div class="info">Enter the email address associated with your account. We'll email your password if we find it.</div>
+        <a class="back" href="/login">Back to login</a>
+      {% endif %}
+    </div>
+  </body>
+</html>
