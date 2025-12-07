@@ -10,5 +10,17 @@
     "active_session": "49f62fd7-57ed-4846-9330-a231237dffb4",
     "theme": "dark",
     "personality": "default"
+  },
+  "hurairah.n64@gmail.com": {
+    "sessions": {
+      "25f88cfb-aa43-4eb6-b1fa-c33141ac4e67": {
+        "name": "Chat 1",
+        "history": [],
+        "created": "2025-12-07 16:13:51"
+      }
+    },
+    "active_session": "25f88cfb-aa43-4eb6-b1fa-c33141ac4e67",
+    "theme": "dark",
+    "personality": "default"
   }
 }
