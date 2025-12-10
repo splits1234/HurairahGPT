@@ -30,7 +30,7 @@ if not os.path.exists(USERS_FILE):
 MOBILE_UA_RE = re.compile(r"android|iphone|ipad|ipod|blackberry|iemobile|windows phone|opera mini|mobile", re.I)
 
 client = OpenAI(
-    api_key="",
+    api_key="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",
     base_url="https://openrouter.ai/api/v1"
 )
 
@@ -140,11 +140,11 @@ def migrate_user_to_sessions(user_data):
     """Migrate old user data structure to new sessions structure"""
     if "sessions" in user_data:
         return user_data  # Already migrated
-    
+
     # Migrate old history to a default session
     session_id = str(uuid.uuid4())
     old_history = user_data.get("history", [])
-    
+
     user_data["sessions"] = {
         session_id: {
             "name": "Chat 1",
@@ -153,11 +153,11 @@ def migrate_user_to_sessions(user_data):
         }
     }
     user_data["active_session"] = session_id
-    
+
     # Remove old history field
     if "history" in user_data:
         del user_data["history"]
-    
+
     return user_data
 
 
@@ -170,10 +170,10 @@ def get_user_data_with_sessions(gmail):
         "theme": "dark",
         "personality": "default"
     })
-    
+
     # Migrate if needed
     user_data = migrate_user_to_sessions(user_data)
-    
+
     # Ensure active_session exists and is valid
     if not user_data.get("active_session") or user_data["active_session"] not in user_data.get("sessions", {}):
         # Create default session if none exists
@@ -190,10 +190,10 @@ def get_user_data_with_sessions(gmail):
         else:
             # Use first available session
             user_data["active_session"] = list(user_data["sessions"].keys())[0]
-    
+
     users[gmail] = user_data
     save_users(users)
-    
+
     return user_data
 
 
@@ -226,15 +226,15 @@ def root():
     active_session_id = user_data.get("active_session")
 
     if is_mobile:
-        return render_template("moindex.html", 
-                             gmail=session["gmail"], 
-                             history=history, 
+        return render_template("moindex.html",
+                             gmail=session["gmail"],
+                             history=history,
                              theme=user_data["theme"],
                              sessions=sessions_list,
                              active_session=active_session_id)
-    return render_template("index.html", 
-                         gmail=session["gmail"], 
-                         history=history, 
+    return render_template("index.html",
+                         gmail=session["gmail"],
+                         history=history,
                          theme=user_data["theme"],
                          sessions=sessions_list,
                          active_session=active_session_id)
@@ -431,7 +431,7 @@ def chat():
                     stream=True,
                     timeout=60
                 )
-                
+
                 for chunk in stream_response:
                     if chunk.choices and len(chunk.choices) > 0:
                         delta = chunk.choices[0].delta
@@ -440,20 +440,20 @@ def chat():
                             full_response += content
                             # Send each chunk as SSE
                             yield f"data: {json.dumps({'chunk': content, 'done': False})}\n\n"
-                
+
                 # Send completion signal
                 yield f"data: {json.dumps({'chunk': '', 'done': True, 'full_response': full_response})}\n\n"
-                
+
                 # Save the full response to history
                 history.append({"content": full_response, "sender": "bot", "time": timestamp})
                 if len(history) > 400:
                     active_session["history"] = history[-400:]
                 else:
                     active_session["history"] = history
-                
+
                 users[session["gmail"]] = user_data
                 save_users(users)
-                
+
             except Exception as e:
                 error_msg = f"AI service unavailable, please try again later."
                 print(f"Streaming API Error: {type(e).__name__}: {str(e)}")
@@ -484,7 +484,7 @@ def chat():
                 raise
 
         ai_reply = retry_request(call_ai, retries=2, delay=2, fallback="AI service unavailable, please try again later.")
-        
+
         if ai_reply == "AI service unavailable, please try again later.":
             print(f"Failed to get AI response after retries.")
             print(f"Please check:")
@@ -582,13 +582,13 @@ def forgot_post():
 def create_session():
     if "gmail" not in session:
         return jsonify({"error": "Unauthorized"}), 401
-    
+
     users = load_users()
     user_data = get_user_data_with_sessions(session["gmail"])
-    
+
     session_id = str(uuid.uuid4())
     session_name = request.json.get("name", "").strip() or f"Chat {len(user_data.get('sessions', {})) + 1}"
-    
+
     user_data.setdefault("sessions", {})
     user_data["sessions"][session_id] = {
         "name": session_name,
@@ -596,10 +596,10 @@ def create_session():
         "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     user_data["active_session"] = session_id
-    
+
     users[session["gmail"]] = user_data
     save_users(users)
-    
+
     return jsonify({"success": True, "session_id": session_id, "sessions": user_data["sessions"]})
 
 
@@ -607,21 +607,21 @@ def create_session():
 def switch_session():
     if "gmail" not in session:
         return jsonify({"error": "Unauthorized"}), 401
-    
+
     session_id = request.json.get("session_id")
     if not session_id:
         return jsonify({"error": "No session_id provided"}), 400
-    
+
     users = load_users()
     user_data = get_user_data_with_sessions(session["gmail"])
-    
+
     if session_id not in user_data.get("sessions", {}):
         return jsonify({"error": "Session not found"}), 404
-    
+
     user_data["active_session"] = session_id
     users[session["gmail"]] = user_data
     save_users(users)
-    
+
     active_session = user_data["sessions"][session_id]
     return jsonify({
         "success": True,
@@ -634,31 +634,31 @@ def switch_session():
 def delete_session():
     if "gmail" not in session:
         return jsonify({"error": "Unauthorized"}), 401
-    
+
     session_id = request.json.get("session_id")
     if not session_id:
         return jsonify({"error": "No session_id provided"}), 400
-    
+
     users = load_users()
     user_data = get_user_data_with_sessions(session["gmail"])
-    
+
     if session_id not in user_data.get("sessions", {}):
         return jsonify({"error": "Session not found"}), 404
-    
+
     sessions = user_data.get("sessions", {})
     if len(sessions) <= 1:
         return jsonify({"error": "Cannot delete the last session"}), 400
-    
+
     # Delete the session
     del sessions[session_id]
-    
+
     # If it was the active session, switch to another one
     if user_data.get("active_session") == session_id:
         user_data["active_session"] = list(sessions.keys())[0]
-    
+
     users[session["gmail"]] = user_data
     save_users(users)
-    
+
     active_session = user_data["sessions"][user_data["active_session"]]
     return jsonify({
         "success": True,
@@ -672,23 +672,23 @@ def delete_session():
 def rename_session():
     if "gmail" not in session:
         return jsonify({"error": "Unauthorized"}), 401
-    
+
     session_id = request.json.get("session_id")
     new_name = request.json.get("name", "").strip()
-    
+
     if not session_id or not new_name:
         return jsonify({"error": "Missing session_id or name"}), 400
-    
+
     users = load_users()
     user_data = get_user_data_with_sessions(session["gmail"])
-    
+
     if session_id not in user_data.get("sessions", {}):
         return jsonify({"error": "Session not found"}), 404
-    
+
     user_data["sessions"][session_id]["name"] = new_name
     users[session["gmail"]] = user_data
     save_users(users)
-    
+
     return jsonify({"success": True, "sessions": user_data["sessions"]})
 
 
