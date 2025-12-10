@@ -157,28 +157,49 @@
       gap: 10px;
       margin-bottom: 2px;
     }
+    @keyframes rotateGradient {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 
-    .logo {
-      width: 32px;
-      height: 32px;
-      border-radius: 999px;
-      background: conic-gradient(
-        from 140deg,
-        #6366f1,
-        #ec4899,
-        #f97316,
-        #22c55e,
-        #6366f1
-      );
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.5),
-        0 10px 22px rgba(15, 23, 42, 0.8);
-      color: white;
-      font-size: 0.9rem;
-      font-weight: 700;
-    }
+.logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.5),
+              0 10px 22px rgba(15, 23, 42, 0.8);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.logo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 140deg,
+    #6366f1,
+    #ec4899,
+    #f97316,
+    #22c55e,
+    #6366f1
+  );
+  animation: rotateGradient 5s linear infinite;
+  z-index: 0;
+}
+
+.logo span {
+  position: relative;
+  z-index: 1; /* letter stays on top and static */
+}
+
 
     body.light .logo {
       box-shadow: 0 0 0 1px rgba(248, 250, 252, 0.9),
