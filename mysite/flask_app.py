@@ -16,9 +16,13 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv()
+
 
 app = Flask(__name__)
-app.secret_key = "supersecretkey"
+app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
@@ -30,9 +34,10 @@ if not os.path.exists(USERS_FILE):
 MOBILE_UA_RE = re.compile(r"android|iphone|ipad|ipod|blackberry|iemobile|windows phone|opera mini|mobile", re.I)
 
 client = OpenAI(
-    api_key="",
-    base_url="https://openrouter.ai/api/v1"
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 )
+
 
 MODEL = "deepseek/deepseek-chat"  # OpenRouter free model
 PERSONALITIES = {
@@ -57,8 +62,9 @@ def save_users(users):
 
 
 def send_email(to_email, subject, body):
-    sender_email = "hurairahgpt.devteam@gmail.com"
-    sender_password = "zexs xnud wwoq rlxe"
+    sender_email = os.getenv("SMTP_EMAIL")
+    sender_password = os.getenv("SMTP_PASSWORD")
+
 
     msg = MIMEMultipart()
     msg["From"] = sender_email
@@ -127,7 +133,7 @@ def get_news_headline():
     def _call():
         res = requests.get("https://newsapi.org/v2/top-headlines",
                            params={"country": "pk",
-                                   "apiKey": "418ef79bb38a4535b08a51a4b48a8c4b"},
+                                   "apiKey": os.getenv("NEWS_API_KEY")},
                            timeout=5)
         data = res.json()
         if data.get("status") == "ok" and data.get("totalResults", 0) > 0:
@@ -463,7 +469,6 @@ def chat():
                 active_session["history"] = history
                 users[session["gmail"]] = user_data
                 save_users(users)
-
         return Response(stream_with_context(generate()), mimetype='text/event-stream')
     else:
         # Non-streaming response (backward compatibility)

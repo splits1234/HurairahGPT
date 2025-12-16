@@ -1243,66 +1243,79 @@
     });
 
     // appendMessage with safety for images & reactions
-    function appendMessage(message, sender='bot') {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'message ' + sender;
+    function appendMessage(message, sender = 'bot') {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'message ' + sender;
 
-      // If message is an image URL, render img (but still sanitize)
-      const trimmed = String(message || '').trim();
-      const isImgUrl = /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(trimmed);
+  const trimmed = String(message || '').trim();
+  const isImgUrl = /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(trimmed);
 
-      if (isImgUrl) {
-        const img = document.createElement('img');
-        img.src = trimmed;
-        img.alt = 'user provided image';
-        wrapper.appendChild(img);
-      } else {
-        // Use marked + DOMPurify to safely convert markdown -> sanitized HTML
-        wrapper.innerHTML = renderMarkdown(trimmed);
-      }
+  if (isImgUrl) {
+    const img = document.createElement('img');
+    img.src = trimmed;
+    img.alt = 'user provided image';
+    wrapper.appendChild(img);
+  } else {
+    wrapper.innerHTML = renderMarkdown(trimmed);
+  }
 
-      // If bot message, add small reaction buttons
-      if (sender === 'bot') {
-        const reactBox = document.createElement('span');
-        reactBox.className = 'reactions';
-        ['👍','😂','❤️'].forEach(r => {
-          const btn = document.createElement('button');
-          btn.className = 'reaction-btn';
-          btn.type = 'button';
-          btn.title = `React ${r}`;
-          btn.textContent = r;
-          btn.onclick = () => {
-            // Simple optimistic UI: show a small toast-like message
-            // (replace with any telemetry or server call you need)
-            const prev = document.getElementById('reaction-toast');
-            if (prev) prev.remove();
-            const toast = document.createElement('div');
-            toast.id = 'reaction-toast';
-            toast.textContent = `You reacted ${r}`;
-            Object.assign(toast.style, { position:'fixed', right:'18px', bottom:'70px', padding:'8px 12px', background:'#111', color:'#fff', borderRadius:'8px', zIndex:1200 });
-            document.body.appendChild(toast);
-            setTimeout(()=> toast.remove(), 1400);
-          };
-          reactBox.appendChild(btn);
-        });
-        wrapper.appendChild(reactBox);
-      }
+  // BOT-ONLY UI: Reactions and Speech
+  if (sender === 'bot') {
+    const reactBox = document.createElement('span');
+    reactBox.className = 'reactions';
 
-      chatBox.appendChild(wrapper);
-      chatBox.scrollTop = chatBox.scrollHeight;
+    // 1. Emoji Reactions
+    ['👍', '😂', '❤️'].forEach(r => {
+      const btn = document.createElement('button');
+      btn.className = 'reaction-btn';
+      btn.type = 'button';
+      btn.title = `React ${r}`;
+      btn.textContent = r;
+      btn.onclick = () => {
+        const prev = document.getElementById('reaction-toast');
+        if (prev) prev.remove();
+        const toast = document.createElement('div');
+        toast.id = 'reaction-toast';
+        toast.textContent = `You reacted ${r}`;
+        Object.assign(toast.style, { position: 'fixed', right: '18px', bottom: '70px', padding: '8px 12px', background: '#111', color: '#fff', borderRadius: '8px', zIndex: 1200 });
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 1400);
+      };
+      reactBox.appendChild(btn);
+    });
 
-      // play sound
-      try { 
-        if (sender === 'user') {
-          sendSound.play().catch(e => console.warn('Sound play failed:', e));
-        } else {
-          receiveSound.play().catch(e => console.warn('Sound play failed:', e));
-        }
-      } catch(e){
-        console.warn('Sound error:', e);
-      }
-      return wrapper;
+    // 2. Speech Button (Only attached to bot messages)
+    const speakBtn = document.createElement('button');
+    speakBtn.className = 'reaction-btn';
+    speakBtn.type = 'button';
+    speakBtn.title = 'Listen to response';
+    speakBtn.textContent = '🔊';
+    speakBtn.onclick = () => {
+      // Use wrapper.innerText to get clean text without the emoji characters
+      const messageText = wrapper.innerText.replace(/[👍😂❤️🔊]/g, '').trim();
+      speakText(messageText);
+    };
+
+    reactBox.appendChild(speakBtn);
+    wrapper.appendChild(reactBox);
+  }
+
+  chatBox.appendChild(wrapper);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  // Sound logic
+  try {
+    if (sender === 'user') {
+      sendSound.play().catch(e => console.warn('Sound play failed:', e));
+    } else {
+      receiveSound.play().catch(e => console.warn('Sound play failed:', e));
     }
+  } catch (e) {
+    console.warn('Sound error:', e);
+  }
+  
+  return wrapper;
+}
 
     // show typing indicator
     function showTyping() {
@@ -1410,10 +1423,10 @@
                   }
                   
                   // Speak the response
-                  if (shouldSpeak && fullResponse) {
-                    speakText(fullResponse);
-                    shouldSpeak = false;
-                  }
+                  //if (shouldSpeak && fullResponse) {
+                  //  speakText(fullResponse);
+                  //  shouldSpeak = false;
+                  //}
                   break;
                 }
               } catch (e) {

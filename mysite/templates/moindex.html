@@ -30,6 +30,35 @@
         --accent: #6366f1;
         --accent-soft: rgba(99, 102, 241, 0.12);
       }
+      
+      .reactions {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+  justify-content: flex-start;
+}
+
+.reaction-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  transition: all 0.2s;
+}
+
+body.light .reaction-btn {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.05);
+}
+
+.reaction-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
 
       * {
         box-sizing: border-box;
@@ -723,11 +752,24 @@
                   }
                   
                   // Speak the response
-                  if (shouldSpeak && fullResponse) {
-                    speakText(fullResponse);
-                    shouldSpeak = false;
-                  }
+                  //if (shouldSpeak && fullResponse) {
+                  //  speakText(fullResponse);
+                  //  shouldSpeak = false;
+                  //}
                   break;
+                  const reactBox = document.createElement('div');
+    reactBox.className = 'reactions';
+    
+    ['👍', '😂', '❤️'].forEach(r => { /* ... reaction btn code ... */ });
+    
+    const speakBtn = document.createElement('button');
+    speakBtn.className = 'reaction-btn';
+    speakBtn.textContent = '🔊';
+    speakBtn.onclick = () => speakText(fullResponse);
+    
+    reactBox.appendChild(speakBtn);
+    botMessageDiv.appendChild(reactBox); // botMessageDiv is your streaming container
+    break;
                 }
               } catch (e) {
                 console.warn("Failed to parse SSE data:", e);
