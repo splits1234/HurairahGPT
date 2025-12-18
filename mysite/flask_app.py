@@ -129,19 +129,7 @@ def excontext():
     return f"your in an app called hurairahgpt. website is talktohurairah.com your developed by hurairah and hurairah is a solo develeper building and mantaining this project you can contect us at hurairahgpt.devteam@gmail.com. He is a male"
 
 def htmlrules():
-    return """if the user asks u to make an html file respond with the html file formated like this
-```html
-<!DOCTYPE html>
-<html>
-<body>
-  <h1>Hello HurairahGPT</h1>
-  <script>
-    document.body.style.background = "black";
-    document.body.style.color = "lime";
-  </script>
-</body>
-</html>
-```"""
+    return """if the user asks u to make an html file respond with the file but give header ```html and the footer as ```"""
 
     
 
