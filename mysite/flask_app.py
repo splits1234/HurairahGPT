@@ -128,6 +128,22 @@ def get_islamic_date():
 def excontext():
     return f"your in an app called hurairahgpt. website is talktohurairah.com your developed by hurairah and hurairah is a solo develeper building and mantaining this project you can contect us at hurairahgpt.devteam@gmail.com. He is a male"
 
+def htmlrules():
+    return """if the user asks u to make an html file say nothing and respond with the html file like this
+```html
+<!DOCTYPE html>
+<html>
+<body>
+  <h1>Hello HurairahGPT</h1>
+  <script>
+    document.body.style.background = "black";
+    document.body.style.color = "lime";
+  </script>
+</body>
+</html>
+```"""
+
+    
 
 def get_news_headline():
     def _call():
@@ -414,7 +430,8 @@ def chat():
         f"Today is {datetime.now().strftime('%A, %B %d, %Y')}.",
         get_islamic_date(),
         get_news_headline(),
-        excontext()
+        excontext(),
+        htmlrules()
     ])
 
     messages = [{"role": "system", "content": system_content}]

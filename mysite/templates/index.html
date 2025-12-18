@@ -1011,6 +1011,47 @@
     }
   </style>
 </head>
+<div id="html-runner-modal" style="
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: none;
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+">
+  <div style="
+    width: 90%;
+    max-width: 1000px;
+    height: 85%;
+    background: #020617;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid rgba(148,163,184,0.4);
+  ">
+    <div style="
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15,23,42,0.95);
+      color: #e5e7eb;
+      font-size: 0.85rem;
+    ">
+      <span>HTML Preview (Client-side)</span>
+      <button onclick="closeHTMLRunner()" class="btn-ghost">✖ Close</button>
+    </div>
+
+    <iframe
+      id="html-runner-frame"
+      sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-forms allow-pointer-lock allow-autoplay"
+      style="flex:1; border:none; background:white;"
+    ></iframe>
+  </div>
+</div>
+
 <body>
   <div class="aurora" aria-hidden="true"></div>
   <div class="shell" role="main" aria-label="HurairahGPT chat layout">
@@ -1135,6 +1176,24 @@
     let synth = window.speechSynthesis;
     let currentUtterance = null;
     
+    function runHTML(html) {
+  const frame = document.getElementById('html-runner-frame');
+  const modal = document.getElementById('html-runner-modal');
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+
+  frame.src = url;
+  modal.style.display = 'flex';
+}
+
+function closeHTMLRunner() {
+  const modal = document.getElementById('html-runner-modal');
+  const frame = document.getElementById('html-runner-frame');
+  frame.src = 'about:blank';
+  modal.style.display = 'none';
+}
+
     // Initialize speech recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1298,6 +1357,22 @@
 
     reactBox.appendChild(speakBtn);
     wrapper.appendChild(reactBox);
+
+    // HTML RUNNER BUTTON (bot only)
+const htmlMatch = trimmed.match(/```html([\s\S]*?)```/i);
+
+if (htmlMatch) {
+  const runBtn = document.createElement('button');
+  runBtn.className = 'reaction-btn';
+  runBtn.type = 'button';
+  runBtn.title = 'Run HTML locally';
+  runBtn.textContent = '▶';
+  runBtn.onclick = () => {
+    runHTML(htmlMatch[1].trim());
+  };
+  reactBox.appendChild(runBtn);
+}
+
   }
 
   chatBox.appendChild(wrapper);
