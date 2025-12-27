@@ -18,6 +18,7 @@ from email.mime.multipart import MIMEMultipart
 from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
+from flask import send_from_directory
 
 
 app = Flask(__name__)
@@ -129,8 +130,8 @@ def excontext():
     return f"your in an app called hurairahgpt. website is talktohurairah.com your developed by hurairah and hurairah is a solo develeper building and mantaining this project you can contect us at hurairahgpt.devteam@gmail.com. He is a male"
 
 
-    
-    
+
+
 
 def get_news_headline():
     def _call():
@@ -247,6 +248,14 @@ def root():
                          theme=user_data["theme"],
                          sessions=sessions_list,
                          active_session=active_session_id)
+
+@app.route("/robots.txt")
+def robots():
+    return send_from_directory(".", "robots.txt")
+
+@app.route("/deletedata")
+def deletedata():
+    return render_template("deletedata.html")
 
 
 @app.route("/slipt")
