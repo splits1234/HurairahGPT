@@ -1186,7 +1186,9 @@
   <audio id="send-sound" src="{{ url_for('static', filename='send.mp3') }}"></audio>
   <audio id="receive-sound" src="{{ url_for('static', filename='receive.mp3') }}"></audio>
 
-  <script>
+
+
+<script>
     // --- data from server via Jinja ---
     const history = {{ history | tojson }};
     const sessions = {{ (sessions or {}) | tojson }};
@@ -1206,6 +1208,8 @@
     const modeChatBtn = document.getElementById('mode-chat');
     const modeImageBtn = document.getElementById('mode-image');
     const sendLabel = document.getElementById('send-label');
+    const sessionsList = document.getElementById('sessions-list');
+    const newSessionBtn = document.getElementById('new-session-btn');
 
     let currentMode = 'chat'; // chat | image
 
@@ -1214,6 +1218,11 @@
     let isRecording = false;
     let synth = window.speechSynthesis;
     let currentUtterance = null;
+    
+    // PWA install
+    let deferredPrompt = null;
+
+    // --- Helper Functions ---
     
     function runHTML(html) {
       const frame = document.getElementById('html-runner-frame');
@@ -1301,147 +1310,401 @@
         currentUtterance = null;
       };
     }
-    const sessionsList = document.getElementById('sessions-list');
-    const newSessionBtn = document.getElementById('new-session-btn');
 
     // Safety: use DOMPurify + marked
     const renderMarkdown = (text) => {
-      // marked.parse supports multiline & block formatting
-      const raw = marked.parse(String(text || ''));
-      return DOMPurify.sanitize(raw, {ALLOWED_TAGS: ['b','i','em','strong','a','p','code','pre','br','ul','ol','li','blockquote','img','h1','h2','h3','span'], ALLOWED_ATTR: ['href','target','rel','src','alt','class','title','width','height','style']});
+        // marked.parse supports multiline & block formatting
+        const raw = marked.parse(String(text || ''));
+        return DOMPurify.sanitize(raw, {
+            ALLOWED_TAGS: ['b','i','em','strong','a','p','code','pre','br','ul','ol','li','blockquote','img','h1','h2','h3','h4','h5','h6','span','div','table','thead','tbody','tr','th','td'],
+            ALLOWED_ATTR: ['href','target','rel','src','alt','class','title','width','height','style','colspan','rowspan']
+        });
     };
 
-    // Install prompt deferred globally so our install button can call it
-    let deferredPrompt = null;
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      // show an unobtrusive install button in bottom-right
-      if (!document.getElementById('pwa-install-btn')) {
-        const installBtn = document.createElement('button');
-        installBtn.id = 'pwa-install-btn';
-        installBtn.textContent = 'Install HurairahGPT';
-        installBtn.setAttribute('aria-label','Install HurairahGPT');
-        Object.assign(installBtn.style, { position:'fixed', right:'18px', bottom:'18px', zIndex:1100, padding:'10px 14px', borderRadius:'10px' });
-        document.body.appendChild(installBtn);
-        installBtn.addEventListener('click', async () => {
-          installBtn.style.display = 'none';
-          try {
-            await deferredPrompt.prompt();
-            const choice = await deferredPrompt.userChoice;
-            console.log('PWA install outcome', choice);
-          } catch (err) {
-            console.warn('Install prompt failed', err);
-          } finally {
-            deferredPrompt = null;
-          }
-        });
-      }
-    });
-
     // appendMessage with safety for images & reactions
-    function appendMessage(message, sender = 'bot') {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'message ' + sender;
+    function appendMessage(message, sender = 'bot', metadata = null) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message ' + sender;
 
-      const trimmed = String(message || '').trim();
-      const isImgUrl = /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(trimmed) || trimmed.startsWith('data:image');
+        const trimmed = String(message || '').trim();
+        
+        // Check for image reference format [IMAGE:image_id]
+        const imageMatch = trimmed.match(/^\[IMAGE:(.+?)\]$/);
+        
+        // Check for external image URL
+        const isImgUrl = /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(trimmed) || 
+                         trimmed.startsWith('data:image');
+        
+        // Check if metadata contains image info
+        const isImageFromMetadata = metadata && metadata.type === 'image';
 
-      if (isImgUrl) {
-        const img = document.createElement('img');
-        img.src = trimmed;
-        img.alt = 'generated image';
-        wrapper.appendChild(img);
-      } else {
-        wrapper.innerHTML = renderMarkdown(trimmed);
-      }
-
-      // BOT-ONLY UI: Reactions and Speech
-      if (sender === 'bot') {
-        const reactBox = document.createElement('span');
-        reactBox.className = 'reactions';
-
-        // 1. Emoji Reactions
-        ['👍', '😂', '❤️'].forEach(r => {
-          const btn = document.createElement('button');
-          btn.className = 'reaction-btn';
-          btn.type = 'button';
-          btn.title = `React ${r}`;
-          btn.textContent = r;
-          btn.onclick = () => {
-            const prev = document.getElementById('reaction-toast');
-            if (prev) prev.remove();
-            const toast = document.createElement('div');
-            toast.id = 'reaction-toast';
-            toast.textContent = `You reacted ${r}`;
-            Object.assign(toast.style, { position: 'fixed', right: '18px', bottom: '70px', padding: '8px 12px', background: '#111', color: '#fff', borderRadius: '8px', zIndex: 1200 });
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 1400);
-          };
-          reactBox.appendChild(btn);
-        });
-
-        // 2. Speech Button (Only attached to bot messages)
-        const speakBtn = document.createElement('button');
-        speakBtn.className = 'reaction-btn';
-        speakBtn.type = 'button';
-        speakBtn.title = 'Listen to response';
-        speakBtn.textContent = '🔊';
-        speakBtn.onclick = () => {
-          // Use wrapper.innerText to get clean text without the emoji characters
-          const messageText = wrapper.innerText.replace(/[👍😂❤️🔊]/g, '').trim();
-          speakText(messageText);
-        };
-
-        reactBox.appendChild(speakBtn);
-        wrapper.appendChild(reactBox);
-
-        // HTML RUNNER BUTTON (bot only)
-        const htmlMatch = trimmed.match(/```html([\s\S]*?)```/i);
-
-        if (htmlMatch) {
-          const runBtn = document.createElement('button');
-          runBtn.className = 'reaction-btn';
-          runBtn.type = 'button';
-          runBtn.title = 'Run HTML locally';
-          runBtn.textContent = '▶';
-          runBtn.onclick = () => {
-            runHTML(htmlMatch[1].trim());
-          };
-          reactBox.appendChild(runBtn);
-        }
-
-      }
-
-      chatBox.appendChild(wrapper);
-      chatBox.scrollTop = chatBox.scrollHeight;
-
-      // Sound logic
-      try {
-        if (sender === 'user') {
-          sendSound.play().catch(e => console.warn('Sound play failed:', e));
+        if (imageMatch && sender === 'bot') {
+            // Handle image reference
+            const imageId = imageMatch[1];
+            
+            // Create image container
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'image-container';
+            
+            // Check if we have thumbnail in metadata
+            if (metadata && metadata.image_info && metadata.image_info.thumbnail) {
+                // Create thumbnail from metadata
+                const thumbImg = document.createElement('img');
+                thumbImg.src = `data:image/jpeg;base64,${metadata.image_info.thumbnail}`;
+                thumbImg.className = 'image-thumbnail';
+                thumbImg.alt = 'Image thumbnail';
+                thumbImg.style.maxWidth = '150px';
+                thumbImg.style.maxHeight = '150px';
+                thumbImg.style.borderRadius = '8px';
+                thumbImg.style.cursor = 'pointer';
+                thumbImg.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+                thumbImg.style.transition = 'transform 0.2s ease';
+                
+                thumbImg.onmouseenter = () => {
+                    thumbImg.style.transform = 'scale(1.05)';
+                };
+                thumbImg.onmouseleave = () => {
+                    thumbImg.style.transform = 'scale(1)';
+                };
+                
+                // Click to view full image
+                thumbImg.onclick = () => {
+                    // Show loading indicator
+                    thumbImg.style.opacity = '0.7';
+                    
+                    // Create full image
+                    const fullImg = document.createElement('img');
+                    fullImg.src = `/images/${imageId}.png`;
+                    fullImg.className = 'image-full';
+                    fullImg.style.maxWidth = '100%';
+                    fullImg.style.maxHeight = '400px';
+                    fullImg.style.borderRadius = '12px';
+                    fullImg.style.marginTop = '10px';
+                    fullImg.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+                    fullImg.style.display = 'block';
+                    
+                    // Replace thumbnail with full image
+                    imgContainer.innerHTML = '';
+                    imgContainer.appendChild(fullImg);
+                    
+                    // Add download button
+                    const downloadBtn = document.createElement('button');
+                    downloadBtn.className = 'reaction-btn';
+                    downloadBtn.style.marginTop = '10px';
+                    downloadBtn.style.marginRight = '8px';
+                    downloadBtn.innerHTML = '⬇️ Download';
+                    downloadBtn.onclick = () => {
+                        const link = document.createElement('a');
+                        link.href = `/images/${imageId}.png`;
+                        link.download = `hurairahgpt-${imageId}.png`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    };
+                    imgContainer.appendChild(downloadBtn);
+                    
+                    // Add back to thumbnail button
+                    const backBtn = document.createElement('button');
+                    backBtn.className = 'reaction-btn';
+                    backBtn.style.marginTop = '10px';
+                    backBtn.innerHTML = '← Back';
+                    backBtn.onclick = () => {
+                        imgContainer.innerHTML = '';
+                        imgContainer.appendChild(thumbImg);
+                        imgContainer.appendChild(downloadBtn);
+                        imgContainer.appendChild(backBtn);
+                    };
+                    imgContainer.appendChild(backBtn);
+                };
+                
+                imgContainer.appendChild(thumbImg);
+                
+                // Add download button for thumbnail view
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'reaction-btn';
+                downloadBtn.style.marginTop = '10px';
+                downloadBtn.style.marginRight = '8px';
+                downloadBtn.innerHTML = '⬇️ Download';
+                downloadBtn.onclick = () => {
+                    const link = document.createElement('a');
+                    link.href = `/images/${imageId}.png`;
+                    link.download = `hurairahgpt-${imageId}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+                imgContainer.appendChild(downloadBtn);
+                
+            } else {
+                // Fallback: direct image load
+                const img = document.createElement('img');
+                img.src = `/images/${imageId}.png`;
+                img.alt = 'Generated image';
+                img.style.maxWidth = '100%';
+                img.style.maxHeight = '400px';
+                img.style.borderRadius = '12px';
+                img.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+                imgContainer.appendChild(img);
+                
+                // Add download button
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'reaction-btn';
+                downloadBtn.style.marginTop = '10px';
+                downloadBtn.innerHTML = '⬇️ Download';
+                downloadBtn.onclick = () => {
+                    const link = document.createElement('a');
+                    link.href = `/images/${imageId}.png`;
+                    link.download = `hurairahgpt-${imageId}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                };
+                imgContainer.appendChild(downloadBtn);
+            }
+            
+            wrapper.appendChild(imgContainer);
+            
+            // Add image info if available
+            if (metadata && metadata.image_info) {
+                const infoDiv = document.createElement('div');
+                infoDiv.style.fontSize = '0.8rem';
+                infoDiv.style.color = 'var(--muted-dark)';
+                infoDiv.style.marginTop = '8px';
+                infoDiv.style.padding = '6px 10px';
+                infoDiv.style.background = 'rgba(0,0,0,0.1)';
+                infoDiv.style.borderRadius = '6px';
+                
+                let infoText = `Size: ${metadata.image_info.width}×${metadata.image_info.height}`;
+                if (metadata.image_info.size_kb) {
+                    infoText += ` • ${metadata.image_info.size_kb}KB`;
+                }
+                if (metadata.prompt) {
+                    infoText += ` • "${metadata.prompt.substring(0, 60)}${metadata.prompt.length > 60 ? '...' : ''}"`;
+                }
+                
+                infoDiv.textContent = infoText;
+                wrapper.appendChild(infoDiv);
+            }
+            
+        } else if (isImgUrl && sender === 'bot') {
+            // Handle direct image URL
+            const img = document.createElement('img');
+            img.src = trimmed;
+            img.alt = 'generated image';
+            img.style.maxWidth = '100%';
+            img.style.borderRadius = '12px';
+            img.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+            wrapper.appendChild(img);
+        } else if (isImageFromMetadata && sender === 'bot') {
+            // Handle image from metadata (alternative format)
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'image-container';
+            
+            const img = document.createElement('img');
+            img.src = `/images/${metadata.image_id}.png`;
+            img.alt = 'Generated image';
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '400px';
+            img.style.borderRadius = '12px';
+            img.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+            imgContainer.appendChild(img);
+            
+            wrapper.appendChild(imgContainer);
         } else {
-          receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+            // Handle normal text/markdown
+            wrapper.innerHTML = renderMarkdown(trimmed);
         }
-      } catch (e) {
-        console.warn('Sound error:', e);
-      }
-      
-      return wrapper;
+
+        // BOT-ONLY UI: Reactions and Speech
+        if (sender === 'bot') {
+            const reactBox = document.createElement('span');
+            reactBox.className = 'reactions';
+            reactBox.style.marginTop = '10px';
+            reactBox.style.display = 'inline-block';
+
+            // 1. Emoji Reactions (only for non-image messages)
+            if (!imageMatch && !isImgUrl && !isImageFromMetadata) {
+                ['👍', '😂', '❤️'].forEach(r => {
+                    const btn = document.createElement('button');
+                    btn.className = 'reaction-btn';
+                    btn.type = 'button';
+                    btn.title = `React ${r}`;
+                    btn.textContent = r;
+                    btn.onclick = () => {
+                        const prev = document.getElementById('reaction-toast');
+                        if (prev) prev.remove();
+                        const toast = document.createElement('div');
+                        toast.id = 'reaction-toast';
+                        toast.textContent = `You reacted ${r}`;
+                        Object.assign(toast.style, { 
+                            position: 'fixed', 
+                            right: '18px', 
+                            bottom: '70px', 
+                            padding: '8px 12px', 
+                            background: 'linear-gradient(135deg, #6366f1, #ec4899)', 
+                            color: '#fff', 
+                            borderRadius: '8px', 
+                            zIndex: 1200,
+                            fontSize: '0.9rem',
+                            fontWeight: '500'
+                        });
+                        document.body.appendChild(toast);
+                        setTimeout(() => toast.remove(), 1400);
+                    };
+                    reactBox.appendChild(btn);
+                });
+            }
+
+            // 2. Speech Button (Only for text messages)
+            if (!imageMatch && !isImgUrl && !isImageFromMetadata && trimmed.length > 0) {
+                const speakBtn = document.createElement('button');
+                speakBtn.className = 'reaction-btn';
+                speakBtn.type = 'button';
+                speakBtn.title = 'Listen to response';
+                speakBtn.textContent = '🔊';
+                speakBtn.onclick = () => {
+                    // Use wrapper.innerText to get clean text without HTML
+                    const messageText = wrapper.innerText
+                        .replace(/[👍😂❤️🔊▶⬇️]/g, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    
+                    if (messageText.length > 0) {
+                        speakText(messageText);
+                        
+                        // Show speaking indicator
+                        speakBtn.textContent = '⏸';
+                        speakBtn.title = 'Stop speaking';
+                        speakBtn.onclick = () => {
+                            if (currentUtterance) {
+                                synth.cancel();
+                                currentUtterance = null;
+                                speakBtn.textContent = '🔊';
+                                speakBtn.title = 'Listen to response';
+                            }
+                        };
+                    }
+                };
+                reactBox.appendChild(speakBtn);
+            }
+
+            // HTML RUNNER BUTTON (bot only - check for HTML code blocks)
+            const htmlMatch = trimmed.match(/```html([\s\S]*?)```/i);
+            if (htmlMatch && !imageMatch && !isImgUrl) {
+                const runBtn = document.createElement('button');
+                runBtn.className = 'reaction-btn';
+                runBtn.type = 'button';
+                runBtn.title = 'Run HTML locally';
+                runBtn.textContent = '▶';
+                runBtn.onclick = () => {
+                    runHTML(htmlMatch[1].trim());
+                };
+                reactBox.appendChild(runBtn);
+            }
+
+            // Copy button for text messages
+            if (!imageMatch && !isImgUrl && !isImageFromMetadata && trimmed.length > 0) {
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'reaction-btn';
+                copyBtn.type = 'button';
+                copyBtn.title = 'Copy to clipboard';
+                copyBtn.textContent = '📋';
+                copyBtn.onclick = async () => {
+                    try {
+                        const textToCopy = wrapper.innerText
+                            .replace(/[👍😂❤️🔊▶⬇️📋]/g, '')
+                            .replace(/\s+/g, ' ')
+                            .trim();
+                        
+                        await navigator.clipboard.writeText(textToCopy);
+                        
+                        // Show copy success
+                        copyBtn.textContent = '✓';
+                        copyBtn.style.background = 'rgba(34, 197, 94, 0.2)';
+                        copyBtn.style.color = '#22c55e';
+                        
+                        setTimeout(() => {
+                            copyBtn.textContent = '📋';
+                            copyBtn.style.background = '';
+                            copyBtn.style.color = '';
+                        }, 2000);
+                    } catch (err) {
+                        console.error('Copy failed:', err);
+                        copyBtn.textContent = '✗';
+                        copyBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+                        copyBtn.style.color = '#ef4444';
+                        
+                        setTimeout(() => {
+                            copyBtn.textContent = '📋';
+                            copyBtn.style.background = '';
+                            copyBtn.style.color = '';
+                        }, 2000);
+                    }
+                };
+                reactBox.appendChild(copyBtn);
+            }
+
+            // Only add reactBox if it has buttons
+            if (reactBox.children.length > 0) {
+                wrapper.appendChild(reactBox);
+            }
+        }
+
+        chatBox.appendChild(wrapper);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Sound logic
+        try {
+            if (sender === 'user') {
+                sendSound.play().catch(e => console.warn('Sound play failed:', e));
+            } else if (!imageMatch && !isImgUrl && !isImageFromMetadata) {
+                receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+            }
+        } catch (e) {
+            console.warn('Sound error:', e);
+        }
+        
+        return wrapper;
     }
 
     // show typing indicator
     function showTyping() {
-      if (document.getElementById('typing')) return;
-      const t = document.createElement('div');
-      t.id = 'typing';
-      t.className = 'typing-indicator';
-      t.textContent = 'Hurairah is typing...';
-      chatBox.appendChild(t);
-      chatBox.scrollTop = chatBox.scrollHeight;
+        if (document.getElementById('typing')) return;
+        const t = document.createElement('div');
+        t.id = 'typing';
+        t.className = 'typing-indicator';
+        t.innerHTML = `
+            <span style="display:inline-block;width:20px;text-align:center;">👁️</span>
+            Hurairah is thinking...
+            <span class="typing-dots">
+                <span style="animation-delay:0s">.</span>
+                <span style="animation-delay:0.2s">.</span>
+                <span style="animation-delay:0.4s">.</span>
+            </span>
+        `;
+        chatBox.appendChild(t);
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
-    function hideTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
+
+    function hideTyping() { 
+        const t = document.getElementById('typing'); 
+        if (t) t.remove(); 
+    }
+
+    // Add CSS for typing dots
+    const style = document.createElement('style');
+    style.textContent = `
+        .typing-dots span {
+            display: inline-block;
+            animation: typingDot 1.4s infinite;
+            opacity: 0.6;
+        }
+        @keyframes typingDot {
+            0%, 60%, 100% { opacity: 0.6; transform: translateY(0); }
+            30% { opacity: 1; transform: translateY(-2px); }
+        }
+    `;
+    document.head.appendChild(style);
 
     // clear & export
     async function clearChat() {
@@ -1454,6 +1717,7 @@
         appendMessage('Network error clearing chat.', 'bot');
       }
     }
+    
     async function exportChat() {
       const lines = Array.from(chatBox.querySelectorAll('.message')).map(m => m.textContent.trim()).filter(Boolean);
       const blob = new Blob([lines.join('\n\n')], {type:'text/plain;charset=utf-8'});
@@ -1483,6 +1747,7 @@
       }
       messageInput.focus();
     }
+    
     modeChatBtn.addEventListener('click', () => setMode('chat'));
     modeImageBtn.addEventListener('click', () => setMode('image'));
 
@@ -1546,7 +1811,6 @@
       chatBox.scrollTop = chatBox.scrollHeight;
       
       let fullResponse = '';
-      let shouldSpeak = true; // Flag to speak only once when complete
       
       try {
         const res = await fetch('/chat', {
@@ -1768,6 +2032,47 @@
       navigator.serviceWorker.register('/static/service-worker.js').catch(err => console.warn('SW failed', err));
     }
 
+    // PWA install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      // show an unobtrusive install button in bottom-right
+      if (!document.getElementById('pwa-install-btn')) {
+        const installBtn = document.createElement('button');
+        installBtn.id = 'pwa-install-btn';
+        installBtn.textContent = 'Install HurairahGPT';
+        installBtn.setAttribute('aria-label','Install HurairahGPT');
+        Object.assign(installBtn.style, { 
+            position:'fixed', 
+            right:'18px', 
+            bottom:'18px', 
+            zIndex:1100, 
+            padding:'10px 14px', 
+            borderRadius:'10px',
+            background: 'linear-gradient(135deg, #6366f1, #ec4899)',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '0.9rem',
+            fontWeight: '600',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+        });
+        document.body.appendChild(installBtn);
+        installBtn.addEventListener('click', async () => {
+            installBtn.style.display = 'none';
+            try {
+                await deferredPrompt.prompt();
+                const choice = await deferredPrompt.userChoice;
+                console.log('PWA install outcome', choice);
+            } catch (err) {
+                console.warn('Install prompt failed', err);
+            } finally {
+                deferredPrompt = null;
+            }
+        });
+      }
+    });
+
     // attach small convenience handlers
     clearBtn.addEventListener('click', clearChat);
     exportBtn.addEventListener('click', exportChat);
@@ -1786,12 +2091,14 @@
       // render existing conversation history
       if (Array.isArray(history)) {
         history.forEach(h => {
-          appendMessage(h.content, h.sender || 'bot');
+          // Pass the entire history item as metadata
+          appendMessage(h.content, h.sender || 'bot', h);
         });
       }
       chatBox.scrollTop = chatBox.scrollHeight;
       messageInput.focus();
     });
   </script>
+  
 </body>
 </html>

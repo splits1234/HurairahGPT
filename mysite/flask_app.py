@@ -10,6 +10,7 @@ from openai import OpenAI
 import json
 import os
 import time
+import base64
 from datetime import datetime
 import requests
 import smtplib
@@ -19,6 +20,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 from flask import send_from_directory
+from PIL import Image
+import io
+
 
 
 app = Flask(__name__)
@@ -235,6 +239,11 @@ def root():
 @app.route("/robots.txt")
 def robots():
     return send_from_directory(".", "robots.txt")
+
+@app.route("/images/<filename>")
+def serve_image(filename):
+    return send_from_directory(IMAGES_DIR, filename)
+
 
 
 @app.route("/deletedata")
@@ -502,6 +511,33 @@ def chat():
         return jsonify({"response": ai_reply})
 
 
+def create_thumbnail(img_data, max_size=(150, 150)):
+    """Create a small thumbnail from image data"""
+    try:
+        # Open image from bytes
+        img = Image.open(io.BytesIO(img_data))
+        
+        # Convert to RGB if necessary
+        if img.mode in ('RGBA', 'LA', 'P'):
+            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+            rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            img = rgb_img
+        
+        # Create thumbnail
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        
+        # Convert to JPEG for smaller size
+        buffered = io.BytesIO()
+        img.save(buffered, format="JPEG", quality=85, optimize=True)
+        img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
+        
+        return img_str
+    except Exception as e:
+        print(f"Thumbnail creation failed: {e}")
+        return None
+
+
+
 @app.route("/image", methods=["POST"])
 def image_gen():
     if "gmail" not in session:
@@ -519,38 +555,303 @@ def image_gen():
 
     payload = {
         "model": "google/gemini-2.5-flash-image-preview",
-        "messages": [
-            {"role": "user", "content": prompt}
-        ],
+        "messages": [{"role": "user", "content": prompt}],
         "modalities": ["image", "text"]
     }
 
     try:
+        print(f"Sending image generation request for prompt: {prompt}")
         r = requests.post(url, headers=headers, json=payload, timeout=120)
         r.raise_for_status()
-    except Exception as e:
-        print("IMAGE CHAT API ERROR:", str(e))
-        return jsonify({"error": "Image generation failed"}), 500
-
-    try:
         data = r.json()
-    except:
-        print("NON-JSON RESPONSE:", r.text)
-        return jsonify({"error": "Invalid response from image API"}), 500
-
-    # Parse the image URL(s) from the response
-    try:
+        
+        print(f"Response received, checking structure...")
+        
+        if "choices" not in data or len(data["choices"]) == 0:
+            return jsonify({"error": "No choices in response"}), 500
+            
         message = data["choices"][0]["message"]
-        images = message.get("images", [])
-        if not images:
-            return jsonify({"error": "No image returned"}), 500
+        
+        # Check if images array exists
+        if "images" not in message or len(message["images"]) == 0:
+            print("No images array in response")
+            return jsonify({"error": "No images in response"}), 500
+        
+        # Get the first image object
+        first_image = message["images"][0]
+        print(f"First image object: {first_image}")
+        
+        # Check the structure - it should have "image_url" with "url" inside
+        if "image_url" not in first_image or "url" not in first_image["image_url"]:
+            print(f"Unexpected image structure: {first_image}")
+            return jsonify({"error": "Unexpected image format"}), 500
+        
+        # Get the data URL
+        data_url = first_image["image_url"]["url"]
+        print(f"Got data URL (first 100 chars): {data_url[:100]}...")
+        
+        # Extract base64 from data URL
+        if not data_url.startswith("data:image/"):
+            print(f"Not a data URL: {data_url[:100]}...")
+            return jsonify({"error": "Not a data URL"}), 500
+        
+        # Split the data URL to get the base64 part
+        try:
+            header, base64_data = data_url.split(",", 1)
+            print(f"Header: {header}")
+            print(f"Base64 data length: {len(base64_data)} chars")
+            
+            # Decode base64
+            img_data = base64.b64decode(base64_data)
+            print(f"Decoded image data: {len(img_data)} bytes")
+            
+        except Exception as e:
+            print(f"Failed to decode base64: {e}")
+            return jsonify({"error": f"Failed to decode image: {str(e)}"}), 500
+        
+        # Save image to disk
+        img_id = str(uuid.uuid4().hex)
+        filename = f"{img_id}.png"
+        filepath = os.path.join(IMAGES_DIR, filename)
+        
+        with open(filepath, "wb") as f:
+            f.write(img_data)
+        print(f"Image saved to {filepath}")
+        
+        # Get image dimensions
+        try:
+            img = Image.open(io.BytesIO(img_data))
+            width, height = img.size
+            print(f"Image dimensions: {width}x{height}")
+        except Exception as img_err:
+            print(f"Could not read image dimensions: {img_err}")
+            width, height = 1024, 1024
+        
+        # Create thumbnail
+        thumbnail_base64 = None
+        try:
+            thumbnail_base64 = create_thumbnail(img_data)
+            print(f"Created thumbnail ({len(thumbnail_base64) if thumbnail_base64 else 0} chars)")
+        except Exception as thumb_err:
+            print(f"Thumbnail creation failed: {thumb_err}")
+        
+        # Save to user history
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        users = load_users()
+        user_data = get_user_data_with_sessions(session["gmail"])
+        active_session_id = user_data.get("active_session")
+        
+        if active_session_id:
+            active_session = user_data["sessions"][active_session_id]
+            
+            image_entry = {
+                "sender": "bot",
+                "type": "image",
+                "content": f"[IMAGE:{img_id}]",
+                "image_id": img_id,
+                "filename": filename,
+                "prompt": prompt,
+                "time": timestamp,
+                "image_info": {
+                    "width": width,
+                    "height": height,
+                    "size_kb": round(len(img_data) / 1024, 2),
+                    "thumbnail": thumbnail_base64
+                }
+            }
+            
+            active_session["history"].append(image_entry)
+            users[session["gmail"]] = user_data
+            save_users(users)
+        
+        return jsonify({
+            "success": True,
+            "url": f"/images/{filename}",
+            "id": img_id,
+            "dimensions": f"{width}x{height}",
+            "size_kb": round(len(img_data) / 1024, 2),
+            "thumbnail": thumbnail_base64
+        })
 
-        # Return the first image URL
-        image_url = images[0]["image_url"]["url"]
-        return jsonify({"url": image_url})
+    except requests.exceptions.RequestException as e:
+        print(f"OpenRouter API request failed: {type(e).__name__}: {str(e)}")
+        return jsonify({"error": f"API request failed: {str(e)}"}), 500
     except Exception as e:
-        print("IMAGE PARSING ERROR:", str(e), data)
-        return jsonify({"error": "Failed to parse image"}), 500
+        print(f"Image generation error: {type(e).__name__}: {str(e)}")
+        traceback.print_exc()
+        return jsonify({"error": f"Image processing failed: {str(e)}"}), 500
+
+@app.route("/image-debug", methods=["POST"])
+def image_gen_debug():
+    """Debug endpoint to see what OpenRouter returns"""
+    if "gmail" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    prompt = request.json.get("prompt", "a cute cat").strip()
+    
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "google/gemini-2.5-flash-image-preview",
+        "messages": [{"role": "user", "content": prompt}],
+        "modalities": ["image", "text"]
+    }
+
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+        
+        # Return structured info
+        debug_info = {
+            "status": "success",
+            "has_choices": "choices" in data and len(data["choices"]) > 0,
+        }
+        
+        if debug_info["has_choices"]:
+            message = data["choices"][0]["message"]
+            debug_info["has_images"] = "images" in message and len(message["images"]) > 0
+            
+            if debug_info["has_images"]:
+                first_image = message["images"][0]
+                debug_info["image_structure"] = {
+                    "type": type(first_image).__name__,
+                    "keys": list(first_image.keys()) if isinstance(first_image, dict) else "N/A"
+                }
+                
+                if isinstance(first_image, dict) and "image_url" in first_image:
+                    image_url = first_image["image_url"]
+                    debug_info["image_url_structure"] = {
+                        "type": type(image_url).__name__,
+                        "keys": list(image_url.keys()) if isinstance(image_url, dict) else "N/A"
+                    }
+                    
+                    if isinstance(image_url, dict) and "url" in image_url:
+                        url_value = image_url["url"]
+                        debug_info["url_info"] = {
+                            "is_data_url": url_value.startswith("data:image/") if isinstance(url_value, str) else False,
+                            "url_preview": str(url_value)[:100] + "..." if isinstance(url_value, str) and len(url_value) > 100 else str(url_value)
+                        }
+        
+        return jsonify(debug_info)
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
+
+@app.route("/test-image", methods=["GET"])
+def test_image():
+    """Test endpoint to see OpenRouter response format"""
+    test_prompt = "a cute cat"
+    
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "google/gemini-2.5-flash-image-preview",
+        "messages": [{"role": "user", "content": test_prompt}],
+        "modalities": ["image", "text"]
+    }
+    
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=60)
+        r.raise_for_status()
+        data = r.json()
+        
+        # Save response for inspection
+        with open("openrouter_response.json", "w") as f:
+            json.dump(data, f, indent=2)
+        
+        # Return just the structure (not the full base64)
+        if "choices" in data and len(data["choices"]) > 0:
+            choice = data["choices"][0]
+            if "message" in choice:
+                message = choice["message"]
+                
+                # Create a safe copy without large base64
+                safe_message = {}
+                for key, value in message.items():
+                    if key == "content" and isinstance(value, str):
+                        # Truncate base64 data
+                        if "base64" in value.lower():
+                            safe_message[key] = value[:200] + "... [TRUNCATED]"
+                        else:
+                            safe_message[key] = value[:500] + "..."
+                    elif key == "images":
+                        safe_message[key] = f"Array with {len(value)} items"
+                    else:
+                        safe_message[key] = str(value)[:200] + "..." if isinstance(value, str) else value
+                
+                return jsonify({
+                    "status": "success",
+                    "response_structure": safe_message,
+                    "saved_to": "openrouter_response.json"
+                })
+        
+        return jsonify({"status": "success", "data": data})
+    
+    except Exception as e:
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+@app.route("/image/thumbnail/<image_id>")
+def get_image_thumbnail(image_id):
+    """Get thumbnail for an image"""
+    if "gmail" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    users = load_users()
+    user_data = users.get(session["gmail"], {})
+    
+    # Check if image exists in user's data
+    if "images" in user_data and image_id in user_data["images"]:
+        thumbnail = user_data["images"][image_id].get("thumbnail")
+        if thumbnail:
+            # Return as data URL
+            return jsonify({
+                "thumbnail": f"data:image/jpeg;base64,{thumbnail}",
+                "image_id": image_id
+            })
+    
+    return jsonify({"error": "Thumbnail not found"}), 404
+
+
+@app.route("/user/images")
+def get_user_images():
+    """Get all images for current user"""
+    if "gmail" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    users = load_users()
+    user_data = users.get(session["gmail"], {})
+    
+    images = user_data.get("images", {})
+    
+    # Return only metadata (not thumbnails) for list view
+    image_list = []
+    for img_id, img_data in images.items():
+        image_list.append({
+            "id": img_id,
+            "filename": img_data.get("filename"),
+            "prompt": img_data.get("prompt", ""),
+            "created": img_data.get("created"),
+            "dimensions": img_data.get("dimensions", "Unknown"),
+            "size_kb": img_data.get("size_kb", 0),
+            "url": f"/images/{img_data.get('filename')}"
+        })
+    
+    return jsonify({"images": image_list})
+
 
 
 
