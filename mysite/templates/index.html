@@ -920,6 +920,35 @@
       margin-right: 4px;
     }
 
+    /* Mode toggle styles */
+    .mode-toggle {
+      display: inline-flex;
+      border: 1px solid rgba(148,163,184,0.7);
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(15, 23, 42, 0.92);
+    }
+
+    body.light .mode-toggle {
+      background: rgba(255,255,255,0.92);
+      border-color: rgba(148,163,184,0.9);
+    }
+
+    .mode-toggle button {
+      border-radius: 0;
+      box-shadow: none;
+      padding: 8px 12px;
+      background: transparent;
+      color: inherit;
+      border: none;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .mode-toggle button.active {
+      background: var(--accent);
+      color: #f8fafc;
+    }
+
     @media (max-width: 960px) {
       .shell {
         flex-direction: column;
@@ -1088,6 +1117,11 @@
             <span class="status-dot"></span>
             <span>Online</span>
           </div>
+          <!-- Mode tab toggle -->
+          <div class="mode-toggle" aria-label="Mode toggle">
+            <button type="button" id="mode-chat" class="active" data-mode="chat" title="Text chat mode">Chat</button>
+            <button type="button" id="mode-image" data-mode="image" title="Image generation (ByteDance Seedream 4.5)">Image</button>
+          </div>
         </div>
 
         <div class="top-right">
@@ -1135,7 +1169,7 @@
       <form id="chat-form" class="input-row" aria-label="Message input form">
         <textarea
           id="message-input"
-          placeholder="Ask Hurairah anything&hellip;"
+          placeholder="Ask Hurairah anything…"
           aria-label="Message input"
         ></textarea>
         <button type="button" id="voice-input-btn" class="voice-btn btn-ghost" title="Voice input">
@@ -1143,7 +1177,7 @@
         </button>
         <button type="submit" class="send-btn btn-accent" title="Send message">
           <span class="icon">➤</span>
-          <span>Send</span>
+          <span id="send-label">Send</span>
         </button>
       </form>
     </section>
@@ -1169,7 +1203,12 @@
     const sendSound = document.getElementById('send-sound');
     const receiveSound = document.getElementById('receive-sound');
     const voiceInputBtn = document.getElementById('voice-input-btn');
-    
+    const modeChatBtn = document.getElementById('mode-chat');
+    const modeImageBtn = document.getElementById('mode-image');
+    const sendLabel = document.getElementById('send-label');
+
+    let currentMode = 'chat'; // chat | image
+
     // Voice input/output setup
     let recognition = null;
     let isRecording = false;
@@ -1177,22 +1216,22 @@
     let currentUtterance = null;
     
     function runHTML(html) {
-  const frame = document.getElementById('html-runner-frame');
-  const modal = document.getElementById('html-runner-modal');
+      const frame = document.getElementById('html-runner-frame');
+      const modal = document.getElementById('html-runner-modal');
 
-  const blob = new Blob([html], { type: 'text/html' });
-  const url = URL.createObjectURL(blob);
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
 
-  frame.src = url;
-  modal.style.display = 'flex';
-}
+      frame.src = url;
+      modal.style.display = 'flex';
+    }
 
-function closeHTMLRunner() {
-  const modal = document.getElementById('html-runner-modal');
-  const frame = document.getElementById('html-runner-frame');
-  frame.src = 'about:blank';
-  modal.style.display = 'none';
-}
+    function closeHTMLRunner() {
+      const modal = document.getElementById('html-runner-modal');
+      const frame = document.getElementById('html-runner-frame');
+      frame.src = 'about:blank';
+      modal.style.display = 'none';
+    }
 
     // Initialize speech recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -1303,94 +1342,94 @@ function closeHTMLRunner() {
 
     // appendMessage with safety for images & reactions
     function appendMessage(message, sender = 'bot') {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'message ' + sender;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'message ' + sender;
 
-  const trimmed = String(message || '').trim();
-  const isImgUrl = /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(trimmed);
+      const trimmed = String(message || '').trim();
+      const isImgUrl = /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(trimmed) || trimmed.startsWith('data:image');
 
-  if (isImgUrl) {
-    const img = document.createElement('img');
-    img.src = trimmed;
-    img.alt = 'user provided image';
-    wrapper.appendChild(img);
-  } else {
-    wrapper.innerHTML = renderMarkdown(trimmed);
-  }
+      if (isImgUrl) {
+        const img = document.createElement('img');
+        img.src = trimmed;
+        img.alt = 'generated image';
+        wrapper.appendChild(img);
+      } else {
+        wrapper.innerHTML = renderMarkdown(trimmed);
+      }
 
-  // BOT-ONLY UI: Reactions and Speech
-  if (sender === 'bot') {
-    const reactBox = document.createElement('span');
-    reactBox.className = 'reactions';
+      // BOT-ONLY UI: Reactions and Speech
+      if (sender === 'bot') {
+        const reactBox = document.createElement('span');
+        reactBox.className = 'reactions';
 
-    // 1. Emoji Reactions
-    ['👍', '😂', '❤️'].forEach(r => {
-      const btn = document.createElement('button');
-      btn.className = 'reaction-btn';
-      btn.type = 'button';
-      btn.title = `React ${r}`;
-      btn.textContent = r;
-      btn.onclick = () => {
-        const prev = document.getElementById('reaction-toast');
-        if (prev) prev.remove();
-        const toast = document.createElement('div');
-        toast.id = 'reaction-toast';
-        toast.textContent = `You reacted ${r}`;
-        Object.assign(toast.style, { position: 'fixed', right: '18px', bottom: '70px', padding: '8px 12px', background: '#111', color: '#fff', borderRadius: '8px', zIndex: 1200 });
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 1400);
-      };
-      reactBox.appendChild(btn);
-    });
+        // 1. Emoji Reactions
+        ['👍', '😂', '❤️'].forEach(r => {
+          const btn = document.createElement('button');
+          btn.className = 'reaction-btn';
+          btn.type = 'button';
+          btn.title = `React ${r}`;
+          btn.textContent = r;
+          btn.onclick = () => {
+            const prev = document.getElementById('reaction-toast');
+            if (prev) prev.remove();
+            const toast = document.createElement('div');
+            toast.id = 'reaction-toast';
+            toast.textContent = `You reacted ${r}`;
+            Object.assign(toast.style, { position: 'fixed', right: '18px', bottom: '70px', padding: '8px 12px', background: '#111', color: '#fff', borderRadius: '8px', zIndex: 1200 });
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 1400);
+          };
+          reactBox.appendChild(btn);
+        });
 
-    // 2. Speech Button (Only attached to bot messages)
-    const speakBtn = document.createElement('button');
-    speakBtn.className = 'reaction-btn';
-    speakBtn.type = 'button';
-    speakBtn.title = 'Listen to response';
-    speakBtn.textContent = '🔊';
-    speakBtn.onclick = () => {
-      // Use wrapper.innerText to get clean text without the emoji characters
-      const messageText = wrapper.innerText.replace(/[👍😂❤️🔊]/g, '').trim();
-      speakText(messageText);
-    };
+        // 2. Speech Button (Only attached to bot messages)
+        const speakBtn = document.createElement('button');
+        speakBtn.className = 'reaction-btn';
+        speakBtn.type = 'button';
+        speakBtn.title = 'Listen to response';
+        speakBtn.textContent = '🔊';
+        speakBtn.onclick = () => {
+          // Use wrapper.innerText to get clean text without the emoji characters
+          const messageText = wrapper.innerText.replace(/[👍😂❤️🔊]/g, '').trim();
+          speakText(messageText);
+        };
 
-    reactBox.appendChild(speakBtn);
-    wrapper.appendChild(reactBox);
+        reactBox.appendChild(speakBtn);
+        wrapper.appendChild(reactBox);
 
-    // HTML RUNNER BUTTON (bot only)
-const htmlMatch = trimmed.match(/```html([\s\S]*?)```/i);
+        // HTML RUNNER BUTTON (bot only)
+        const htmlMatch = trimmed.match(/```html([\s\S]*?)```/i);
 
-if (htmlMatch) {
-  const runBtn = document.createElement('button');
-  runBtn.className = 'reaction-btn';
-  runBtn.type = 'button';
-  runBtn.title = 'Run HTML locally';
-  runBtn.textContent = '▶';
-  runBtn.onclick = () => {
-    runHTML(htmlMatch[1].trim());
-  };
-  reactBox.appendChild(runBtn);
-}
+        if (htmlMatch) {
+          const runBtn = document.createElement('button');
+          runBtn.className = 'reaction-btn';
+          runBtn.type = 'button';
+          runBtn.title = 'Run HTML locally';
+          runBtn.textContent = '▶';
+          runBtn.onclick = () => {
+            runHTML(htmlMatch[1].trim());
+          };
+          reactBox.appendChild(runBtn);
+        }
 
-  }
+      }
 
-  chatBox.appendChild(wrapper);
-  chatBox.scrollTop = chatBox.scrollHeight;
+      chatBox.appendChild(wrapper);
+      chatBox.scrollTop = chatBox.scrollHeight;
 
-  // Sound logic
-  try {
-    if (sender === 'user') {
-      sendSound.play().catch(e => console.warn('Sound play failed:', e));
-    } else {
-      receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+      // Sound logic
+      try {
+        if (sender === 'user') {
+          sendSound.play().catch(e => console.warn('Sound play failed:', e));
+        } else {
+          receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+        }
+      } catch (e) {
+        console.warn('Sound error:', e);
+      }
+      
+      return wrapper;
     }
-  } catch (e) {
-    console.warn('Sound error:', e);
-  }
-  
-  return wrapper;
-}
 
     // show typing indicator
     function showTyping() {
@@ -1428,11 +1467,72 @@ if (htmlMatch) {
       URL.revokeObjectURL(url);
     }
 
-    // submit handler with streaming support
+    // Mode toggle handlers
+    function setMode(mode) {
+      currentMode = mode;
+      if (mode === 'chat') {
+        modeChatBtn.classList.add('active');
+        modeImageBtn.classList.remove('active');
+        messageInput.placeholder = "Ask Hurairah anything…";
+        sendLabel.textContent = "Send";
+      } else {
+        modeChatBtn.classList.remove('active');
+        modeImageBtn.classList.add('active');
+        messageInput.placeholder = "Describe the image you want (ByteDance Seedream 4.5)…";
+        sendLabel.textContent = "Generate";
+      }
+      messageInput.focus();
+    }
+    modeChatBtn.addEventListener('click', () => setMode('chat'));
+    modeImageBtn.addEventListener('click', () => setMode('image'));
+
+    // submit handler with streaming support for chat; normal fetch for image
     chatForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const msg = messageInput.value.trim();
       if (!msg) return;
+
+      if (currentMode === 'image') {
+        // Image generation flow
+        appendMessage(msg, 'user');
+        messageInput.value = '';
+        messageInput.disabled = true;
+        messageInput.focus();
+
+        const botMessageDiv = document.createElement('div');
+        botMessageDiv.className = 'message bot';
+        botMessageDiv.innerHTML = 'Generating image...';
+        chatBox.appendChild(botMessageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+          const res = await fetch('/image', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ prompt: msg })
+          });
+          const data = await res.json();
+          if (data.url) {
+            botMessageDiv.innerHTML = '';
+            const img = document.createElement('img');
+            img.src = data.url;
+            img.alt = 'generated image';
+            botMessageDiv.appendChild(img);
+            receiveSound.play().catch(()=>{});
+          } else {
+            botMessageDiv.innerHTML = renderMarkdown(data.error || 'Image generation failed.');
+          }
+        } catch (err) {
+          console.error('Image gen error:', err);
+          botMessageDiv.innerHTML = renderMarkdown('Network error. Please try again.');
+        } finally {
+          messageInput.disabled = false;
+          messageInput.focus();
+        }
+        return;
+      }
+
+      // Chat flow with streaming
       appendMessage(msg, 'user');
       messageInput.value = '';
       messageInput.disabled = true;
@@ -1497,11 +1597,6 @@ if (htmlMatch) {
                     console.warn('Sound error:', e);
                   }
                   
-                  // Speak the response
-                  //if (shouldSpeak && fullResponse) {
-                  //  speakText(fullResponse);
-                  //  shouldSpeak = false;
-                  //}
                   break;
                 }
               } catch (e) {
@@ -1673,9 +1768,6 @@ if (htmlMatch) {
       navigator.serviceWorker.register('/static/service-worker.js').catch(err => console.warn('SW failed', err));
     }
 
-    // install hooks: also expose deferredPrompt on window for debugging
-    window.deferredPrompt = deferredPrompt;
-
     // attach small convenience handlers
     clearBtn.addEventListener('click', clearChat);
     exportBtn.addEventListener('click', exportChat);
@@ -1694,15 +1786,12 @@ if (htmlMatch) {
       // render existing conversation history
       if (Array.isArray(history)) {
         history.forEach(h => {
-          // each history entry expected {sender: 'user'|'bot', content: '...'}
           appendMessage(h.content, h.sender || 'bot');
         });
       }
       chatBox.scrollTop = chatBox.scrollHeight;
-      // focus input for quick typing
       messageInput.focus();
     });
-
   </script>
 </body>
 </html>

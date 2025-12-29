@@ -24,9 +24,11 @@ from flask import send_from_directory
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USERS_FILE = os.path.join(BASE_DIR, "users.json")
+IMAGES_DIR = os.path.join(BASE_DIR, "user_images")
+os.makedirs(IMAGES_DIR, exist_ok=True)
+
 
 if not os.path.exists(USERS_FILE):
     with open(USERS_FILE, "w") as f:
@@ -39,8 +41,10 @@ client = OpenAI(
     base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 )
 
+MODEL = "deepseek/deepseek-chat"  # OpenRouter free model (text/chat)
+# At the top of app.py
+IMG_MODEL = "black-forest-labs/flux-1-schnell"  # ByteDance Seedream 4.5 for image generation  # ByteDance Seedream 4.5 for image generation
 
-MODEL = "deepseek/deepseek-chat"  # OpenRouter free model
 PERSONALITIES = {
     "default": "You are a helpful AI assistant.",
     "funny": "You are sarcastic, witty, and always crack jokes.",
@@ -65,7 +69,6 @@ def save_users(users):
 def send_email(to_email, subject, body):
     sender_email = os.getenv("SMTP_EMAIL")
     sender_password = os.getenv("SMTP_PASSWORD")
-
 
     msg = MIMEMultipart()
     msg["From"] = sender_email
@@ -116,14 +119,6 @@ def retry_request(func, retries=3, delay=1, fallback="Unavailable"):
     return fallback
 
 
-def get_islamic_date():
-    def _call():
-        res = requests.get("http://api.aladhan.com/v1/gToH",
-                           params={"date": datetime.now().strftime("%d-%m-%Y")},
-                           timeout=5)
-        hijri = res.json()["data"]["hijri"]["date"]
-        return f"Islamic date: {hijri}"
-    return retry_request(_call, fallback="Islamic date unavailable.")
 
 
 def excontext():
@@ -131,19 +126,6 @@ def excontext():
 
 
 
-
-
-def get_news_headline():
-    def _call():
-        res = requests.get("https://newsapi.org/v2/top-headlines",
-                           params={"country": "pk",
-                                   "apiKey": os.getenv("NEWS_API_KEY")},
-                           timeout=5)
-        data = res.json()
-        if data.get("status") == "ok" and data.get("totalResults", 0) > 0:
-            return f"Top news: {data['articles'][0]['title']}"
-        return "No news articles found."
-    return retry_request(_call, fallback="News unavailable.")
 
 
 def migrate_user_to_sessions(user_data):
@@ -237,21 +219,23 @@ def root():
 
     if is_mobile:
         return render_template("moindex.html",
-                             gmail=session["gmail"],
-                             history=history,
-                             theme=user_data["theme"],
-                             sessions=sessions_list,
-                             active_session=active_session_id)
+                               gmail=session["gmail"],
+                               history=history,
+                               theme=user_data["theme"],
+                               sessions=sessions_list,
+                               active_session=active_session_id)
     return render_template("index.html",
-                         gmail=session["gmail"],
-                         history=history,
-                         theme=user_data["theme"],
-                         sessions=sessions_list,
-                         active_session=active_session_id)
+                           gmail=session["gmail"],
+                           history=history,
+                           theme=user_data["theme"],
+                           sessions=sessions_list,
+                           active_session=active_session_id)
+
 
 @app.route("/robots.txt")
 def robots():
     return send_from_directory(".", "robots.txt")
+
 
 @app.route("/deletedata")
 def deletedata():
@@ -384,8 +368,6 @@ def signup():
     return render_template("signup.html")
 
 
-
-
 @app.route("/logout")
 def logout():
     session.pop("gmail", None)
@@ -424,8 +406,6 @@ def chat():
     user_personality = user_data.get("personality", "default")
     system_content = PERSONALITIES.get(user_personality, PERSONALITIES["default"]) + "\n\n" + "\n".join([
         f"Today is {datetime.now().strftime('%A, %B %d, %Y')}.",
-        get_islamic_date(),
-        get_news_headline(),
         excontext()
     ])
 
@@ -473,7 +453,7 @@ def chat():
                 save_users(users)
 
             except Exception as e:
-                error_msg = f"AI service unavailable, please try again later."
+                error_msg = "AI service unavailable, please try again later."
                 print(f"Streaming API Error: {type(e).__name__}: {str(e)}")
                 yield f"data: {json.dumps({'chunk': '', 'done': True, 'error': error_msg})}\n\n"
                 # Save error message
@@ -503,12 +483,12 @@ def chat():
         ai_reply = retry_request(call_ai, retries=2, delay=2, fallback="AI service unavailable, please try again later.")
 
         if ai_reply == "AI service unavailable, please try again later.":
-            print(f"Failed to get AI response after retries.")
-            print(f"Please check:")
+            print("Failed to get AI response after retries.")
+            print("Please check:")
             print(f"  1. API key is valid: {client.api_key[:20]}...")
             print(f"  2. Model name is correct: {MODEL}")
             print(f"  3. Network connection to {client.base_url}")
-            print(f"  4. OpenRouter API status")
+            print("  4. OpenRouter API status")
 
         history.append({"content": ai_reply, "sender": "bot", "time": timestamp})
         if len(history) > 400:
@@ -520,6 +500,59 @@ def chat():
         save_users(users)
 
         return jsonify({"response": ai_reply})
+
+
+@app.route("/image", methods=["POST"])
+def image_gen():
+    if "gmail" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    prompt = request.json.get("prompt", "").strip()
+    if not prompt:
+        return jsonify({"error": "No prompt"}), 400
+
+    url = "https://openrouter.ai/api/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "model": "google/gemini-2.5-flash-image-preview",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "modalities": ["image", "text"]
+    }
+
+    try:
+        r = requests.post(url, headers=headers, json=payload, timeout=120)
+        r.raise_for_status()
+    except Exception as e:
+        print("IMAGE CHAT API ERROR:", str(e))
+        return jsonify({"error": "Image generation failed"}), 500
+
+    try:
+        data = r.json()
+    except:
+        print("NON-JSON RESPONSE:", r.text)
+        return jsonify({"error": "Invalid response from image API"}), 500
+
+    # Parse the image URL(s) from the response
+    try:
+        message = data["choices"][0]["message"]
+        images = message.get("images", [])
+        if not images:
+            return jsonify({"error": "No image returned"}), 500
+
+        # Return the first image URL
+        image_url = images[0]["image_url"]["url"]
+        return jsonify({"url": image_url})
+    except Exception as e:
+        print("IMAGE PARSING ERROR:", str(e), data)
+        return jsonify({"error": "Failed to parse image"}), 500
+
+
 
 
 @app.route("/theme", methods=["POST"])
