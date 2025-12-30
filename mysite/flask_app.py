@@ -64,7 +64,7 @@ client = OpenAI(
     base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 )
 
-MODEL = "deepseek/deepseek-chat"  # OpenRouter free model (text/chat)
+MODEL = "deepseek/deepseek-r1-0528:free"  # OpenRouter free model (text/chat)
 IMG_MODEL = "google/gemini-2.5-flash-image-preview"  # Updated image model
 
 PERSONALITIES = {
@@ -328,7 +328,7 @@ def retry_request(func, retries=3, delay=1, fallback="Unavailable"):
 
 
 def excontext():
-    return f"your in an app called hurairahgpt. website is talktohurairah.com your developed by hurairah and hurairah is a solo develeper building and mantaining this project you can contect us at hurairahgpt.devteam@gmail.com. He is a male"
+    return f" your in an app called hurairahgpt. website is talktohurairah.com your developed by hurairah and hurairah is a solo develeper building and mantaining this project you can contect us at hurairahgpt.devteam@gmail.com. He is a male"
 
 
 @app.route("/")
@@ -754,10 +754,23 @@ def image_gen():
     }
 
     payload = {
-        "model": IMG_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "modalities": ["image", "text"]
-    }
+    "model": IMG_MODEL,
+    "messages": [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": prompt},
+                {
+                    "type": "image",
+                    "size": "1024x1024",  # 👈 WIDTH x HEIGHT
+                    "quality": "low"      # 👈 THIS keeps size under 1MB
+                }
+            ]
+        }
+    ],
+    "modalities": ["image"]
+}
+
 
     try:
         print(f"Sending image generation request for prompt: {prompt}")
