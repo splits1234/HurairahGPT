@@ -19,6 +19,9 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
       rel="stylesheet"
     />
+    <!-- marked + DOMPurify -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.4/dist/purify.min.js"></script>
     <style>
       :root {
         --bg-dark: #020617;
@@ -29,36 +32,42 @@
         --muted-light: #6b7280;
         --accent: #6366f1;
         --accent-soft: rgba(99, 102, 241, 0.12);
+        --danger: #ef4444;
+        --chat-user: linear-gradient(135deg, #6366f1, #ec4899);
+        --chat-bot-dark: #020617;
+        --border-dark: rgba(30, 64, 175, 0.9);
+        --border-light: rgba(148, 163, 184, 0.8);
       }
-      
+
       .reactions {
-  display: flex;
-  gap: 4px;
-  margin-top: 8px;
-  justify-content: flex-start;
-}
+        display: flex;
+        gap: 4px;
+        margin-top: 8px;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+      }
 
-.reaction-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: inherit;
-  cursor: pointer;
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  transition: all 0.2s;
-}
+      .reaction-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        color: inherit;
+        cursor: pointer;
+        font-size: 0.8rem;
+        padding: 4px 8px;
+        transition: all 0.2s;
+      }
 
-body.light .reaction-btn {
-  background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.05);
-}
+      body.light .reaction-btn {
+        background: rgba(0, 0, 0, 0.05);
+        border-color: rgba(0, 0, 0, 0.05);
+      }
 
-.reaction-btn:hover {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-}
-
+      .reaction-btn:hover {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+        transform: translateY(-1px);
+      }
 
       * {
         box-sizing: border-box;
@@ -69,31 +78,31 @@ body.light .reaction-btn {
         font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto,
           sans-serif;
         background: radial-gradient(
-         circle at 0 0,
-       rgba(56, 189, 248, 1),
-         transparent 45%
-        ),
-        radial-gradient(
-         circle at 100% 100%,
-       rgba(168, 85, 247, 1),
-         transparent 55%
-        ),
-        radial-gradient(
-         circle at 30% 100%,
-       rgba(249, 115, 22, 1),
-         transparent 70%
-        ),
-        radial-gradient(
-         circle at 0% 100%,
-       rgba(249, 115, 22, 1),
-         transparent 70%
-        ),
-        radial-gradient(
-         circle at 70% 20%,
-       rgba(247, 36, 68, 1),
-         transparent 50%
-        );
-        var(--bg-dark);
+            circle at 0 0,
+            rgba(56, 189, 248, 1),
+            transparent 45%
+          ),
+          radial-gradient(
+            circle at 100% 100%,
+            rgba(168, 85, 247, 1),
+            transparent 55%
+          ),
+          radial-gradient(
+            circle at 30% 100%,
+            rgba(249, 115, 22, 1),
+            transparent 70%
+          ),
+          radial-gradient(
+            circle at 0% 100%,
+            rgba(249, 115, 22, 1),
+            transparent 70%
+          ),
+          radial-gradient(
+            circle at 70% 20%,
+            rgba(247, 36, 68, 1),
+            transparent 50%
+          ),
+          var(--bg-dark);
         color: var(--text-dark);
         height: 100vh;
         display: flex;
@@ -116,6 +125,70 @@ body.light .reaction-btn {
         color: var(--text-light);
       }
 
+      /* HTML Runner Modal */
+      #html-runner-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        z-index: 2000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #html-runner-frame {
+        width: 90%;
+        max-width: 1000px;
+        height: 85%;
+        background: #020617;
+        border-radius: 16px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+      }
+
+      .html-runner-header {
+        padding: 10px 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.95);
+        color: #e5e7eb;
+        font-size: 0.85rem;
+      }
+
+      /* Mode Toggle */
+      .mode-toggle {
+        display: inline-flex;
+        border: 1px solid var(--border-dark);
+        border-radius: 999px;
+        overflow: hidden;
+        background: rgba(15, 23, 42, 0.92);
+      }
+
+      body.light .mode-toggle {
+        background: rgba(255, 255, 255, 0.92);
+        border-color: var(--border-light);
+      }
+
+      .mode-toggle button {
+        border-radius: 0;
+        box-shadow: none;
+        padding: 6px 12px;
+        background: transparent;
+        color: inherit;
+        border: none;
+        font-size: 0.75rem;
+        font-weight: 500;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+
+      .mode-toggle button.active {
+        background: var(--accent);
+        color: #f8fafc;
+      }
+
       header {
         display: flex;
         align-items: center;
@@ -124,12 +197,12 @@ body.light .reaction-btn {
         backdrop-filter: blur(18px);
         -webkit-backdrop-filter: blur(18px);
         background: rgba(15, 23, 42, 0.85);
-        border-bottom: 1px solid rgba(30, 64, 175, 0.9);
+        border-bottom: 1px solid var(--border-dark);
       }
 
       body.light header {
         background: rgba(249, 250, 251, 0.92);
-        border-bottom-color: rgba(148, 163, 184, 0.7);
+        border-bottom-color: var(--border-light);
       }
 
       .brand {
@@ -220,6 +293,7 @@ body.light .reaction-btn {
         align-items: center;
         gap: 4px;
         box-shadow: 0 8px 18px rgba(15, 23, 42, 0.9);
+        cursor: pointer;
       }
 
       body.light .icon-btn {
@@ -252,6 +326,46 @@ body.light .reaction-btn {
         border-radius: 999px;
       }
 
+      /* Image container styles */
+      .image-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      .image-container img {
+        max-width: 100%;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        cursor: pointer;
+        transition: transform 0.2s ease;
+      }
+
+      .image-thumbnail {
+        max-width: 150px !important;
+        max-height: 150px !important;
+      }
+
+      .image-full {
+        max-width: 100% !important;
+        max-height: 400px !important;
+      }
+
+      .image-info {
+        font-size: 0.75rem;
+        color: var(--muted-dark);
+        margin-top: 8px;
+        padding: 6px 10px;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 6px;
+      }
+
+      body.light .image-info {
+        color: var(--muted-light);
+        background: rgba(0, 0, 0, 0.05);
+      }
+
       .message {
         padding: 10px 13px;
         border-radius: 14px;
@@ -262,6 +376,7 @@ body.light .reaction-btn {
         line-height: 1.5;
         box-shadow: 0 10px 22px rgba(15, 23, 42, 0.75);
         animation: fadeIn 0.18s ease-out;
+        position: relative;
       }
 
       @keyframes fadeIn {
@@ -276,7 +391,7 @@ body.light .reaction-btn {
       }
 
       .message.user {
-        background: linear-gradient(135deg, #6366f1, #ec4899);
+        background: var(--chat-user);
         align-self: flex-end;
         color: #f9fafb;
         border-bottom-right-radius: 6px;
@@ -291,14 +406,14 @@ body.light .reaction-btn {
           #020617;
         align-self: flex-start;
         color: #e5e7eb;
-        border: 1px solid rgba(30, 64, 175, 0.85);
+        border: 1px solid var(--border-dark);
         border-bottom-left-radius: 6px;
       }
 
       body.light .message.bot {
         background: #ffffff;
         color: #111827;
-        border-color: rgba(148, 163, 184, 0.8);
+        border-color: var(--border-light);
         box-shadow: 0 8px 20px rgba(148, 163, 184, 0.4);
       }
 
@@ -307,13 +422,13 @@ body.light .reaction-btn {
         gap: 8px;
         padding: 10px 10px 12px;
         background: rgba(15, 23, 42, 0.92);
-        border-top: 1px solid rgba(30, 64, 175, 0.9);
+        border-top: 1px solid var(--border-dark);
         align-items: flex-end;
       }
 
       body.light form {
         background: rgba(249, 250, 251, 0.96);
-        border-top-color: rgba(148, 163, 184, 0.8);
+        border-top-color: var(--border-light);
       }
 
       textarea {
@@ -355,6 +470,7 @@ body.light .reaction-btn {
         background: linear-gradient(135deg, #6366f1, #ec4899);
         color: #f9fafb;
         box-shadow: 0 16px 32px rgba(76, 29, 149, 0.8);
+        cursor: pointer;
       }
 
       .voice-btn {
@@ -378,28 +494,44 @@ body.light .reaction-btn {
         box-shadow: 0 6px 16px rgba(15, 23, 42, 0.22);
       }
 
-      .voice-btn:hover {
-        transform: scale(1.05);
-      }
-
       .voice-btn.recording {
         background: linear-gradient(135deg, #ef4444, #dc2626);
         animation: pulse 1.5s infinite;
       }
 
       @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.7; }
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
       }
 
       .typing-indicator {
         font-style: italic;
         font-size: 0.8rem;
         color: var(--muted-dark);
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        align-self: flex-start;
+        margin-top: 2px;
+        animation: typingPulse 1.4s ease-in-out infinite;
       }
 
-      body.light .typing-indicator {
-        color: var(--muted-light);
+      @keyframes typingPulse {
+        0%,
+        100% {
+          opacity: 0.36;
+          transform: translateY(0);
+        }
+        50% {
+          opacity: 1;
+          transform: translateY(-2px);
+        }
       }
 
       /* slide-out menu for actions and personality */
@@ -419,13 +551,13 @@ body.light .reaction-btn {
         gap: 12px;
         transition: right 0.25s ease;
         z-index: 40;
-        border-left: 1px solid rgba(30, 64, 175, 0.9);
+        border-left: 1px solid var(--border-dark);
       }
 
       body.light .side-menu {
         background: rgba(249, 250, 251, 0.98);
         color: #111827;
-        border-left-color: rgba(148, 163, 184, 0.9);
+        border-left-color: var(--border-light);
       }
 
       .side-menu.open {
@@ -455,6 +587,7 @@ body.light .reaction-btn {
         padding: 9px 12px;
         color: inherit;
         font-size: 0.85rem;
+        cursor: pointer;
       }
 
       body.light .side-btn,
@@ -475,6 +608,21 @@ body.light .reaction-btn {
     </style>
   </head>
   <body>
+    <!-- HTML Runner Modal -->
+    <div id="html-runner-modal">
+      <div id="html-runner-frame">
+        <div class="html-runner-header">
+          <span>HTML Preview (Client-side)</span>
+          <button onclick="closeHTMLRunner()" class="icon-btn">✖ Close</button>
+        </div>
+        <iframe
+          id="html-runner-frame-content"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-modals allow-forms allow-pointer-lock allow-autoplay"
+          style="flex: 1; border: none; background: white"
+        ></iframe>
+      </div>
+    </div>
+
     <header>
       <div class="brand">
         <div class="brand-logo">H</div>
@@ -488,35 +636,34 @@ body.light .reaction-btn {
           <span class="status-dot"></span>
           <span>Online</span>
         </div>
-        <button id="menuToggle" class="icon-btn" type="button">
-          <span class="icon">☰</span>
-        </button>
+        <!-- Mode toggle -->
+        <div class="mode-toggle" aria-label="Mode toggle">
+          <button type="button" id="mode-chat" class="active" data-mode="chat">
+            Chat
+          </button>
+          <button type="button" id="mode-image" data-mode="image">
+            Image
+          </button>
+        </div>
+        <button id="menuToggle" class="icon-btn" type="button">☰</button>
       </div>
     </header>
 
     <div class="chat-box" id="chat-box"></div>
     <form id="chat-form">
-      <textarea
-        id="message-input"
-        placeholder="Ask Hurairah anything…"
-      ></textarea>
+      <textarea id="message-input" placeholder="Ask Hurairah anything…"></textarea>
       <button type="button" id="voice-input-btn" class="voice-btn" title="Voice input">
         <span>🎤</span>
       </button>
       <button type="submit">
-        <span>Send</span>
+        <span id="send-label">Send</span>
       </button>
     </form>
 
     <div class="side-menu" id="sideMenu">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px">
         <h2>Controls</h2>
-        <button
-          class="icon-btn"
-          id="closeMenu"
-          type="button"
-          style="padding:4px 8px;font-size:0.8rem;"
-        >
+        <button class="icon-btn" id="closeMenu" type="button" style="padding: 4px 8px; font-size: 0.8rem">
           ✕
         </button>
       </div>
@@ -531,7 +678,7 @@ body.light .reaction-btn {
         📥 Export chat
       </button>
 
-      <small style="margin-top:6px;">Personality</small>
+      <small style="margin-top: 6px">Personality</small>
       <select id="personality-mobile">
         <option value="default">Default</option>
         <option value="funny">Funny</option>
@@ -539,414 +686,834 @@ body.light .reaction-btn {
         <option value="coder">Coder</option>
       </select>
 
-      <small style="margin-top:10px;">Chat Sessions</small>
-      <div id="sessions-list-mobile" style="display:flex;flex-direction:column;gap:6px;max-height:150px;overflow-y:auto;margin-bottom:6px;"></div>
-      <button class="side-btn" id="new-session-btn-mobile" type="button" style="margin-top:4px;">
+      <small style="margin-top: 10px">Chat Sessions</small>
+      <div id="sessions-list-mobile" style="display: flex; flex-direction: column; gap: 6px; max-height: 150px; overflow-y: auto; margin-bottom: 6px"></div>
+      <button class="side-btn" id="new-session-btn-mobile" type="button" style="margin-top: 4px">
         ➕ New Chat
       </button>
 
       {% if gmail %}
-      <div
-        style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(148,163,184,0.4);"
-        class="profile"
-      >
-        <span style="font-size:0.85rem;font-weight:500;">{{ gmail }}</span>
-        <button
-          class="side-btn"
-          style="margin-top:4px;"
-          type="button"
-          onclick="window.location.href='/logout'"
-        >
+      <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(148, 163, 184, 0.4)" class="profile">
+        <span style="font-size: 0.85rem; font-weight: 500">{{ gmail }}</span>
+        <button class="side-btn" style="margin-top: 4px" type="button" onclick="window.location.href='/logout'">
           ↩ Logout
         </button>
       </div>
       {% else %}
-      <button
-        class="side-btn"
-        style="margin-top:10px;"
-        type="button"
-        onclick="window.location.href='/login'"
-      >
+      <button class="side-btn" style="margin-top: 10px" type="button" onclick="window.location.href='/login'">
         🔑 Login
       </button>
       {% endif %}
 
-      <div class="side-footer">
-        Tip: Press Enter to send, Shift+Enter for a new line.
-      </div>
+      <div class="side-footer">Tip: Press Enter to send, Shift+Enter for a new line.</div>
     </div>
 
-  <audio id="send-sound" src="{{ url_for('static', filename='send.mp3') }}"></audio>
-  <audio id="receive-sound" src="{{ url_for('static', filename='receive.mp3') }}"></audio>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <script>
-    const history = {{ history | tojson }};
-    const sessions = {{ (sessions or {}) | tojson }};
-    const activeSession = {{ (active_session or '') | tojson }};
-    const chatBox = document.getElementById("chat-box");
-    const chatForm = document.getElementById("chat-form");
-    const messageInput = document.getElementById("message-input");
-    const sessionsListMobile = document.getElementById("sessions-list-mobile");
-    const newSessionBtnMobile = document.getElementById("new-session-btn-mobile");
-    const voiceInputBtn = document.getElementById("voice-input-btn");
-    const sendSound = document.getElementById("send-sound");
-    const receiveSound = document.getElementById("receive-sound");
-    
-    // Voice input/output setup
-    let recognition = null;
-    let isRecording = false;
-    let synth = window.speechSynthesis;
-    let currentUtterance = null;
-    
-    // Initialize speech recognition
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-      
-      recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        messageInput.value = transcript;
-        messageInput.focus();
-      };
-      
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        voiceInputBtn.classList.remove('recording');
-        isRecording = false;
-      };
-      
-      recognition.onend = () => {
-        voiceInputBtn.classList.remove('recording');
-        isRecording = false;
-      };
-    } else {
-      voiceInputBtn.style.display = 'none';
-    }
-    
-    // Voice input button handler
-    voiceInputBtn.addEventListener('click', () => {
-      if (!recognition) return;
-      
-      if (isRecording) {
-        recognition.stop();
-        isRecording = false;
-        voiceInputBtn.classList.remove('recording');
+    <audio id="send-sound" src="{{ url_for('static', filename='send.mp3') }}"></audio>
+    <audio id="receive-sound" src="{{ url_for('static', filename='receive.mp3') }}"></audio>
+    <script>
+      const history = {{ history | tojson }};
+      const sessions = {{ (sessions or {}) | tojson }};
+      const activeSession = {{ (active_session or '') | tojson }};
+      const chatBox = document.getElementById("chat-box");
+      const chatForm = document.getElementById("chat-form");
+      const messageInput = document.getElementById("message-input");
+      const sessionsListMobile = document.getElementById("sessions-list-mobile");
+      const newSessionBtnMobile = document.getElementById("new-session-btn-mobile");
+      const voiceInputBtn = document.getElementById("voice-input-btn");
+      const sendSound = document.getElementById("send-sound");
+      const receiveSound = document.getElementById("receive-sound");
+      const modeChatBtn = document.getElementById("mode-chat");
+      const modeImageBtn = document.getElementById("mode-image");
+      const sendLabel = document.getElementById("send-label");
+
+      // Voice input/output setup
+      let recognition = null;
+      let isRecording = false;
+      let synth = window.speechSynthesis;
+      let currentUtterance = null;
+      let currentMode = 'chat';
+
+      // HTML Runner functions
+      function runHTML(html) {
+        const frame = document.getElementById('html-runner-frame-content');
+        const modal = document.getElementById('html-runner-modal');
+        
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        
+        frame.src = url;
+        modal.style.display = 'flex';
+      }
+
+      function closeHTMLRunner() {
+        const modal = document.getElementById('html-runner-modal');
+        const frame = document.getElementById('html-runner-frame-content');
+        frame.src = 'about:blank';
+        modal.style.display = 'none';
+        URL.revokeObjectURL(frame.src);
+      }
+
+      // Initialize speech recognition
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+        
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          messageInput.value = transcript;
+          messageInput.focus();
+        };
+        
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          voiceInputBtn.classList.remove('recording');
+          isRecording = false;
+        };
+        
+        recognition.onend = () => {
+          voiceInputBtn.classList.remove('recording');
+          isRecording = false;
+        };
       } else {
-        recognition.start();
-        isRecording = true;
-        voiceInputBtn.classList.add('recording');
+        voiceInputBtn.style.display = 'none';
       }
-    });
-
-    function appendMessage(msg, sender) {
-      const div = document.createElement("div");
-      div.className = "message " + sender;
-      div.innerHTML = marked.parseInline(msg);
-      chatBox.appendChild(div);
-      chatBox.scrollTop = chatBox.scrollHeight;
       
-      // Play sound effects
-      try {
-        if (sender === 'user') {
-          sendSound.play().catch(e => console.warn('Sound play failed:', e));
+      // Voice input button handler
+      voiceInputBtn.addEventListener('click', () => {
+        if (!recognition) return;
+        
+        if (isRecording) {
+          recognition.stop();
+          isRecording = false;
+          voiceInputBtn.classList.remove('recording');
         } else {
-          receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+          recognition.start();
+          isRecording = true;
+          voiceInputBtn.classList.add('recording');
         }
-      } catch (e) {
-        console.warn('Sound error:', e);
-      }
-    }
-    
-    // Text-to-speech function
-    function speakText(text) {
-      if (!synth) return;
-      
-      // Stop any current speech
-      if (currentUtterance) {
-        synth.cancel();
-      }
-      
-      // Clean text (remove markdown formatting for speech)
-      const cleanText = text.replace(/[#*_`\[\]()]/g, '').trim();
-      if (!cleanText) return;
-      
-      currentUtterance = new SpeechSynthesisUtterance(cleanText);
-      currentUtterance.lang = 'en-US';
-      currentUtterance.rate = 1.0;
-      currentUtterance.pitch = 1.0;
-      currentUtterance.volume = 0.8;
-      
-      synth.speak(currentUtterance);
-      
-      currentUtterance.onend = () => {
-        currentUtterance = null;
-      };
-    }
+      });
 
-    chatForm.addEventListener("submit", async e => {
-      e.preventDefault();
-      const msg = messageInput.value.trim();
-      if (!msg) return;
-      appendMessage(msg, "user");
-      messageInput.value = "";
-      
-      // Create a bot message element for streaming
-      const botMessageDiv = document.createElement("div");
-      botMessageDiv.className = "message bot";
-      botMessageDiv.innerHTML = "";
-      chatBox.appendChild(botMessageDiv);
-      chatBox.scrollTop = chatBox.scrollHeight;
-      
-      let fullResponse = "";
-      let shouldSpeak = true; // Flag to speak only once when complete
-      
-      try {
-        const res = await fetch("/chat", {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({ message: msg, stream: true })
+      // Text-to-speech function
+      function speakText(text) {
+        if (!synth) return;
+        
+        if (currentUtterance) {
+          synth.cancel();
+        }
+        
+        const cleanText = text.replace(/[#*_`\[\]()]/g, '').trim();
+        if (!cleanText) return;
+        
+        currentUtterance = new SpeechSynthesisUtterance(cleanText);
+        currentUtterance.lang = 'en-US';
+        currentUtterance.rate = 1.0;
+        currentUtterance.pitch = 1.0;
+        currentUtterance.volume = 0.8;
+        
+        synth.speak(currentUtterance);
+        
+        currentUtterance.onend = () => {
+          currentUtterance = null;
+        };
+      }
+
+      // Safety: use DOMPurify + marked
+      const renderMarkdown = (text) => {
+        const raw = marked.parse(String(text || ''));
+        return DOMPurify.sanitize(raw, {
+          ALLOWED_TAGS: ['b','i','em','strong','a','p','code','pre','br','ul','ol','li','blockquote','img','h1','h2','h3','h4','h5','h6','span','div','table','thead','tbody','tr','th','td'],
+          ALLOWED_ATTR: ['href','target','rel','src','alt','class','title','width','height','style','colspan','rowspan']
         });
+      };
 
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
+      // Mode toggle handlers
+      function setMode(mode) {
+        currentMode = mode;
+        if (mode === 'chat') {
+          modeChatBtn.classList.add('active');
+          modeImageBtn.classList.remove('active');
+          messageInput.placeholder = "Ask Hurairah anything…";
+          sendLabel.textContent = "Send";
+        } else {
+          modeChatBtn.classList.remove('active');
+          modeImageBtn.classList.add('active');
+          messageInput.placeholder = "Describe the image you want (Google Gemini 3 PRO)…";
+          sendLabel.textContent = "Generate";
+        }
+        messageInput.focus();
+      }
+      
+      modeChatBtn.addEventListener('click', () => setMode('chat'));
+      modeImageBtn.addEventListener('click', () => setMode('image'));
+
+      // Enhanced appendMessage with image support
+      function appendMessage(message, sender = 'bot', metadata = null) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message ' + sender;
+
+        const trimmed = String(message || '').trim();
+        
+        // Check for image reference format [IMAGE:image_id]
+        const imageMatch = trimmed.match(/^\[IMAGE:(.+?)\]$/);
+        const isImgUrl = /^https?:\/\/.+\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(trimmed) || trimmed.startsWith('data:image');
+        const isImageFromMetadata = metadata && metadata.type === 'image';
+
+        if (imageMatch && sender === 'bot') {
+          // Handle image reference
+          const imageId = imageMatch[1];
+          const imgContainer = document.createElement('div');
+          imgContainer.className = 'image-container';
+          
+          // Create thumbnail
+          const thumbImg = document.createElement('img');
+          thumbImg.src = `/images/${imageId}.png`;
+          thumbImg.className = 'image-thumbnail';
+          thumbImg.alt = 'Image thumbnail';
+          thumbImg.style.maxWidth = '150px';
+          thumbImg.style.maxHeight = '150px';
+          thumbImg.style.borderRadius = '8px';
+          thumbImg.style.cursor = 'pointer';
+          thumbImg.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+          thumbImg.style.transition = 'transform 0.2s ease';
+          
+          thumbImg.onmouseenter = () => {
+            thumbImg.style.transform = 'scale(1.05)';
+          };
+          thumbImg.onmouseleave = () => {
+            thumbImg.style.transform = 'scale(1)';
+          };
+          
+          // Click to view full image
+          thumbImg.onclick = () => {
+            thumbImg.style.opacity = '0.7';
+            
+            const fullImg = document.createElement('img');
+            fullImg.src = `/images/${imageId}.png`;
+            fullImg.className = 'image-full';
+            fullImg.style.maxWidth = '100%';
+            fullImg.style.maxHeight = '400px';
+            fullImg.style.borderRadius = '12px';
+            fullImg.style.marginTop = '10px';
+            fullImg.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+            fullImg.style.display = 'block';
+            
+            imgContainer.innerHTML = '';
+            imgContainer.appendChild(fullImg);
+            
+            // Add download button
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'reaction-btn';
+            downloadBtn.style.marginTop = '10px';
+            downloadBtn.style.marginRight = '8px';
+            downloadBtn.innerHTML = '⬇️ Download';
+            downloadBtn.onclick = () => {
+              const link = document.createElement('a');
+              link.href = `/images/${imageId}.png`;
+              link.download = `hurairahgpt-${imageId}.png`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+            };
+            imgContainer.appendChild(downloadBtn);
+            
+            // Add back to thumbnail button
+            const backBtn = document.createElement('button');
+            backBtn.className = 'reaction-btn';
+            backBtn.style.marginTop = '10px';
+            backBtn.innerHTML = '← Back';
+            backBtn.onclick = () => {
+              imgContainer.innerHTML = '';
+              imgContainer.appendChild(thumbImg);
+              imgContainer.appendChild(downloadBtn);
+              imgContainer.appendChild(backBtn);
+            };
+            imgContainer.appendChild(backBtn);
+          };
+          
+          imgContainer.appendChild(thumbImg);
+          
+          // Add download button for thumbnail
+          const downloadBtn = document.createElement('button');
+          downloadBtn.className = 'reaction-btn';
+          downloadBtn.style.marginTop = '10px';
+          downloadBtn.style.marginRight = '8px';
+          downloadBtn.innerHTML = '⬇️ Download';
+          downloadBtn.onclick = () => {
+            const link = document.createElement('a');
+            link.href = `/images/${imageId}.png`;
+            link.download = `hurairahgpt-${imageId}.png`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          };
+          imgContainer.appendChild(downloadBtn);
+          
+          wrapper.appendChild(imgContainer);
+          
+          // Add image info if available
+          if (metadata && metadata.image_info) {
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'image-info';
+            
+            let infoText = `Size: ${metadata.image_info.width}×${metadata.image_info.height}`;
+            if (metadata.image_info.size_kb) {
+              infoText += ` • ${metadata.image_info.size_kb}KB`;
+            }
+            if (metadata.prompt) {
+              infoText += ` • "${metadata.prompt.substring(0, 60)}${metadata.prompt.length > 60 ? '...' : ''}"`;
+            }
+            
+            infoDiv.textContent = infoText;
+            wrapper.appendChild(infoDiv);
+          }
+          
+        } else if (isImgUrl && sender === 'bot') {
+          // Handle direct image URL
+          const img = document.createElement('img');
+          img.src = trimmed;
+          img.alt = 'Generated image';
+          img.style.maxWidth = '100%';
+          img.style.borderRadius = '12px';
+          img.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+          wrapper.appendChild(img);
+        } else if (isImageFromMetadata && sender === 'bot') {
+          // Handle image from metadata
+          const imgContainer = document.createElement('div');
+          imgContainer.className = 'image-container';
+          
+          const img = document.createElement('img');
+          img.src = `/images/${metadata.image_id}.png`;
+          img.alt = 'Generated image';
+          img.style.maxWidth = '100%';
+          img.style.maxHeight = '400px';
+          img.style.borderRadius = '12px';
+          img.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+          imgContainer.appendChild(img);
+          
+          wrapper.appendChild(imgContainer);
+        } else {
+          // Handle normal text/markdown
+          wrapper.innerHTML = renderMarkdown(trimmed);
         }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+        // BOT-ONLY UI: Reactions and Speech
+        if (sender === 'bot') {
+          const reactBox = document.createElement('div');
+          reactBox.className = 'reactions';
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+          // Emoji Reactions (only for non-image messages)
+          if (!imageMatch && !isImgUrl && !isImageFromMetadata) {
+            ['👍', '😂', '❤️'].forEach(r => {
+              const btn = document.createElement('button');
+              btn.className = 'reaction-btn';
+              btn.type = 'button';
+              btn.title = `React ${r}`;
+              btn.textContent = r;
+              btn.onclick = () => {
+                const prev = document.getElementById('reaction-toast');
+                if (prev) prev.remove();
+                const toast = document.createElement('div');
+                toast.id = 'reaction-toast';
+                toast.textContent = `You reacted ${r}`;
+                Object.assign(toast.style, {
+                  position: 'fixed',
+                  right: '18px',
+                  bottom: '70px',
+                  padding: '8px 12px',
+                  background: 'linear-gradient(135deg, #6366f1, #ec4899)',
+                  color: '#fff',
+                  borderRadius: '8px',
+                  zIndex: 1200,
+                  fontSize: '0.9rem',
+                  fontWeight: '500'
+                });
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 1400);
+              };
+              reactBox.appendChild(btn);
+            });
+          }
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                if (data.chunk) {
-                  fullResponse += data.chunk;
-                  botMessageDiv.innerHTML = marked.parseInline(fullResponse);
-                  chatBox.scrollTop = chatBox.scrollHeight;
-                }
-                if (data.done) {
-                  if (data.error) {
-                    botMessageDiv.innerHTML = marked.parseInline(data.error);
-                    fullResponse = data.error;
-                  } else if (data.full_response) {
-                    fullResponse = data.full_response;
-                    botMessageDiv.innerHTML = marked.parseInline(fullResponse);
+          // Speech Button (Only for text messages)
+          if (!imageMatch && !isImgUrl && !isImageFromMetadata && trimmed.length > 0) {
+            const speakBtn = document.createElement('button');
+            speakBtn.className = 'reaction-btn';
+            speakBtn.type = 'button';
+            speakBtn.title = 'Listen to response';
+            speakBtn.textContent = '🔊';
+            speakBtn.onclick = () => {
+              const messageText = wrapper.innerText
+                .replace(/[👍😂❤️🔊▶⬇️📋]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+              
+              if (messageText.length > 0) {
+                speakText(messageText);
+                
+                speakBtn.textContent = '⏸';
+                speakBtn.title = 'Stop speaking';
+                speakBtn.onclick = () => {
+                  if (currentUtterance) {
+                    synth.cancel();
+                    currentUtterance = null;
+                    speakBtn.textContent = '🔊';
+                    speakBtn.title = 'Listen to response';
                   }
-                  
-                  // Play receive sound and speak response
-                  try {
-                    receiveSound.play().catch(e => console.warn('Sound play failed:', e));
-                  } catch (e) {
-                    console.warn('Sound error:', e);
-                  }
-                  
-                  // Speak the response
-                  //if (shouldSpeak && fullResponse) {
-                  //  speakText(fullResponse);
-                  //  shouldSpeak = false;
-                  //}
-                  break;
-                  const reactBox = document.createElement('div');
-    reactBox.className = 'reactions';
-    
-    ['👍', '😂', '❤️'].forEach(r => { /* ... reaction btn code ... */ });
-    
-    const speakBtn = document.createElement('button');
-    speakBtn.className = 'reaction-btn';
-    speakBtn.textContent = '🔊';
-    speakBtn.onclick = () => speakText(fullResponse);
-    
-    reactBox.appendChild(speakBtn);
-    botMessageDiv.appendChild(reactBox); // botMessageDiv is your streaming container
-    break;
-                }
-              } catch (e) {
-                console.warn("Failed to parse SSE data:", e);
+                };
               }
-            }
+            };
+            reactBox.appendChild(speakBtn);
+          }
+
+          // HTML RUNNER BUTTON (bot only - check for HTML code blocks)
+          const htmlMatch = trimmed.match(/```html([\s\S]*?)```/i);
+          if (htmlMatch && !imageMatch && !isImgUrl) {
+            const runBtn = document.createElement('button');
+            runBtn.className = 'reaction-btn';
+            runBtn.type = 'button';
+            runBtn.title = 'Run HTML locally';
+            runBtn.textContent = '▶';
+            runBtn.onclick = () => {
+              runHTML(htmlMatch[1].trim());
+            };
+            reactBox.appendChild(runBtn);
+          }
+
+          // Copy button for text messages
+          if (!imageMatch && !isImgUrl && !isImageFromMetadata && trimmed.length > 0) {
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'reaction-btn';
+            copyBtn.type = 'button';
+            copyBtn.title = 'Copy to clipboard';
+            copyBtn.textContent = '📋';
+            copyBtn.onclick = async () => {
+              try {
+                const textToCopy = wrapper.innerText
+                  .replace(/[👍😂❤️🔊▶⬇️📋]/g, '')
+                  .replace(/\s+/g, ' ')
+                  .trim();
+                
+                await navigator.clipboard.writeText(textToCopy);
+                
+                copyBtn.textContent = '✓';
+                copyBtn.style.background = 'rgba(34, 197, 94, 0.2)';
+                copyBtn.style.color = '#22c55e';
+                
+                setTimeout(() => {
+                  copyBtn.textContent = '📋';
+                  copyBtn.style.background = '';
+                  copyBtn.style.color = '';
+                }, 2000);
+              } catch (err) {
+                console.error('Copy failed:', err);
+                copyBtn.textContent = '✗';
+                copyBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+                copyBtn.style.color = '#ef4444';
+                
+                setTimeout(() => {
+                  copyBtn.textContent = '📋';
+                  copyBtn.style.background = '';
+                  copyBtn.style.color = '';
+                }, 2000);
+              }
+            };
+            reactBox.appendChild(copyBtn);
+          }
+
+          if (reactBox.children.length > 0) {
+            wrapper.appendChild(reactBox);
           }
         }
-      } catch (err) {
-        botMessageDiv.innerHTML = marked.parseInline("Network error. Please try again.");
-        console.error("Streaming error:", err);
+
+        chatBox.appendChild(wrapper);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // Sound logic
         try {
-          receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+          if (sender === 'user') {
+            sendSound.play().catch(e => console.warn('Sound play failed:', e));
+          } else if (!imageMatch && !isImgUrl && !isImageFromMetadata) {
+            receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+          }
         } catch (e) {
           console.warn('Sound error:', e);
         }
+        
+        return wrapper;
       }
-    });
 
-    function clearChat() {
-      chatBox.innerHTML = "";
-      fetch("/chat", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ message: "__CLEAR__" }) })
-        .then(r=>r.json()).then(d=>appendMessage(d.response,"bot"));
-    }
-    function exportChat() {
-      const text = Array.from(chatBox.querySelectorAll(".message"))
-        .map(m=>m.textContent).join("\n");
-      const blob = new Blob([text], {type:"text/plain"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "HurairahGPT_Chat.txt";
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }
-    function toggleDarkMode() {
-      document.body.classList.toggle("light");
-      const light = document.body.classList.contains("light");
-      document.getElementById("darkBtn").textContent = light ? "🌙 Dark Mode" : "☀️ Light Mode";
-      localStorage.setItem("theme", light ? "light" : "dark");
-      fetch("/theme", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ theme: light ? "light":"dark" }) });
-    }
-    document.getElementById("personality-mobile").addEventListener("change", async function() {
-      await fetch("/personality", {
-        method: "POST", headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({ personality: this.value })
-      });
-    });
-
-    // Session management
-    let currentSessions = sessions || {};
-    let currentActiveSession = activeSession;
-
-    function renderSessionsMobile() {
-      sessionsListMobile.innerHTML = '';
-      Object.entries(currentSessions).forEach(([id, session]) => {
-        const item = document.createElement('div');
-        item.className = 'side-btn';
-        item.style.cssText = 'text-align:left;position:relative;padding-right:32px;';
-        if (id === currentActiveSession) {
-          item.style.background = 'rgba(99, 102, 241, 0.2)';
-          item.style.borderColor = 'rgba(99, 102, 241, 0.6)';
-        }
-        item.innerHTML = `
-          <span>${session.name}</span>
-          ${id !== currentActiveSession ? `<button class="icon-btn" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:2px 6px;font-size:0.7rem;" data-action="delete" data-id="${id}" title="Delete">🗑</button>` : ''}
+      // show typing indicator
+      function showTyping() {
+        if (document.getElementById('typing')) return;
+        const t = document.createElement('div');
+        t.id = 'typing';
+        t.className = 'typing-indicator';
+        t.innerHTML = `
+          <span style="display:inline-block;width:20px;text-align:center;">👁️</span>
+          Hurairah is thinking...
+          <span class="typing-dots">
+            <span style="animation-delay:0s">.</span>
+            <span style="animation-delay:0.2s">.</span>
+            <span style="animation-delay:0.4s">.</span>
+          </span>
         `;
-        item.addEventListener('click', (e) => {
-          if (!e.target.closest('button')) {
-            switchSessionMobile(id);
+        chatBox.appendChild(t);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+
+      function hideTyping() {
+        const t = document.getElementById('typing');
+        if (t) t.remove();
+      }
+
+      // Chat form submit handler with streaming support
+      chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const msg = messageInput.value.trim();
+        if (!msg) return;
+
+        // Image generation flow
+        if (currentMode === 'image') {
+          appendMessage(msg, 'user');
+          messageInput.value = '';
+          messageInput.disabled = true;
+          
+          const botMessageDiv = document.createElement('div');
+          botMessageDiv.className = 'message bot';
+          botMessageDiv.innerHTML = 'Generating image...';
+          chatBox.appendChild(botMessageDiv);
+          chatBox.scrollTop = chatBox.scrollHeight;
+
+          try {
+            const res = await fetch('/image', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({ prompt: msg })
+            });
+            const data = await res.json();
+            
+            // Remove the "generating" message
+            botMessageDiv.remove();
+            
+            if (data.url || data.image_id) {
+              // Display the generated image
+              const imageId = data.image_id || data.url.split('/').pop().replace('.png', '');
+              appendMessage(`[IMAGE:${imageId}]`, 'bot', {
+                type: 'image',
+                image_id: imageId,
+                image_info: data.image_info || { width: data.width, height: data.height, size_kb: data.size_kb },
+                prompt: msg
+              });
+            } else {
+              appendMessage(data.error || 'Image generation failed.', 'bot');
+            }
+          } catch (err) {
+            console.error('Image gen error:', err);
+            botMessageDiv.innerHTML = 'Network error. Please try again.';
+          } finally {
+            messageInput.disabled = false;
+            messageInput.focus();
           }
-        });
-        sessionsListMobile.appendChild(item);
+          return;
+        }
+
+        // Chat flow with streaming
+        appendMessage(msg, 'user');
+        messageInput.value = '';
+        messageInput.disabled = true;
+        
+        const botMessageDiv = document.createElement('div');
+        botMessageDiv.className = 'message bot';
+        botMessageDiv.innerHTML = '';
+        chatBox.appendChild(botMessageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+        
+        let fullResponse = '';
+        
+        try {
+          const res = await fetch('/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ message: msg, stream: true })
+          });
+
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.chunk) {
+                    fullResponse += data.chunk;
+                    botMessageDiv.innerHTML = renderMarkdown(fullResponse);
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                  }
+                  if (data.done) {
+                    if (data.error) {
+                      botMessageDiv.innerHTML = renderMarkdown(data.error);
+                      fullResponse = data.error;
+                    } else if (data.full_response) {
+                      fullResponse = data.full_response;
+                      botMessageDiv.innerHTML = renderMarkdown(fullResponse);
+                    }
+                    
+                    try {
+                      receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+                    } catch (e) {
+                      console.warn('Sound error:', e);
+                    }
+                    break;
+                  }
+                } catch (e) {
+                  console.warn('Failed to parse SSE data:', e);
+                }
+              }
+            }
+          }
+        } catch (err) {
+          botMessageDiv.innerHTML = renderMarkdown('Network error. Please try again.');
+          console.error('Streaming error:', err);
+          try {
+            receiveSound.play().catch(e => console.warn('Sound play failed:', e));
+          } catch (e) {
+            console.warn('Sound error:', e);
+          }
+        } finally {
+          messageInput.disabled = false;
+          messageInput.focus();
+        }
       });
 
-      sessionsListMobile.querySelectorAll('button[data-action="delete"]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const sessionId = btn.dataset.id;
-          if (confirm('Delete this chat session?')) {
-            deleteSessionMobile(sessionId);
-          }
-        });
+      // Enter to send (Shift+Enter for newline)
+      messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          chatForm.requestSubmit();
+        }
       });
-    }
 
-    async function createSessionMobile(name) {
-      try {
-        const res = await fetch('/sessions/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name || `Chat ${Object.keys(currentSessions).length + 1}` })
-        });
-        const data = await res.json();
-        if (data.success) {
-          currentSessions = data.sessions;
-          currentActiveSession = data.session_id;
-          renderSessionsMobile();
-          chatBox.innerHTML = '';
-          sideMenu.classList.remove('open');
-          return true;
-        }
-      } catch (e) {
-        console.error('Failed to create session', e);
-      }
-      return false;
-    }
-
-    async function switchSessionMobile(sessionId) {
-      if (sessionId === currentActiveSession) {
-        sideMenu.classList.remove('open');
-        return;
-      }
-      try {
-        const res = await fetch('/sessions/switch', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId })
-        });
-        const data = await res.json();
-        if (data.success) {
-          currentActiveSession = sessionId;
-          currentSessions = data.sessions;
-          renderSessionsMobile();
-          chatBox.innerHTML = '';
-          data.history.forEach(h => {
-            appendMessage(h.content, h.sender || 'bot');
+      // Other functions
+      async function clearChat() {
+        chatBox.innerHTML = '';
+        try {
+          const res = await fetch('/chat', { 
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json'}, 
+            body: JSON.stringify({ message: '__CLEAR__' }) 
           });
-          chatBox.scrollTop = chatBox.scrollHeight;
+          const data = await res.json();
+          if (data && data.response) appendMessage(data.response, 'bot');
+        } catch (e) {
+          appendMessage('Network error clearing chat.', 'bot');
+        }
+      }
+      
+      async function exportChat() {
+        const lines = Array.from(chatBox.querySelectorAll('.message')).map(m => m.textContent.trim()).filter(Boolean);
+        const blob = new Blob([lines.join('\n\n')], {type: 'text/plain;charset=utf-8'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'HurairahGPT_Chat.txt';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function toggleDarkMode() {
+        const isLight = document.body.classList.toggle('light');
+        const darkBtn = document.getElementById('darkBtn');
+        darkBtn.textContent = isLight ? '🌙 Dark Mode' : '☀️ Light Mode';
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        fetch('/theme', { 
+          method: 'POST', 
+          headers: {'Content-Type': 'application/json'}, 
+          body: JSON.stringify({ theme: isLight ? 'light' : 'dark' }) 
+        }).catch(() => {});
+      }
+
+      document.getElementById('personality-mobile').addEventListener('change', async function() {
+        await fetch('/personality', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ personality: this.value })
+        }).catch(() => {});
+      });
+
+      // Session management
+      let currentSessions = sessions || {};
+      let currentActiveSession = activeSession;
+
+      function renderSessionsMobile() {
+        sessionsListMobile.innerHTML = '';
+        Object.entries(currentSessions).forEach(([id, session]) => {
+          const item = document.createElement('div');
+          item.className = 'side-btn';
+          item.style.cssText = 'text-align:left;position:relative;padding-right:32px;';
+          if (id === currentActiveSession) {
+            item.style.background = 'rgba(99, 102, 241, 0.2)';
+            item.style.borderColor = 'rgba(99, 102, 241, 0.6)';
+          }
+          item.innerHTML = `
+            <span>${session.name}</span>
+            ${id !== currentActiveSession ? `<button class="icon-btn" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:2px 6px;font-size:0.7rem;" data-action="delete" data-id="${id}" title="Delete">🗑</button>` : ''}
+          `;
+          item.addEventListener('click', (e) => {
+            if (!e.target.closest('button')) {
+              switchSessionMobile(id);
+            }
+          });
+          sessionsListMobile.appendChild(item);
+        });
+
+        sessionsListMobile.querySelectorAll('button[data-action="delete"]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const sessionId = btn.dataset.id;
+            if (confirm('Delete this chat session?')) {
+              deleteSessionMobile(sessionId);
+            }
+          });
+        });
+      }
+
+      async function createSessionMobile(name) {
+        try {
+          const res = await fetch('/sessions/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: name || `Chat ${Object.keys(currentSessions).length + 1}` })
+          });
+          const data = await res.json();
+          if (data.success) {
+            currentSessions = data.sessions;
+            currentActiveSession = data.session_id;
+            renderSessionsMobile();
+            chatBox.innerHTML = '';
+            sideMenu.classList.remove('open');
+            return true;
+          }
+        } catch (e) {
+          console.error('Failed to create session', e);
+        }
+        return false;
+      }
+
+      async function switchSessionMobile(sessionId) {
+        if (sessionId === currentActiveSession) {
+          sideMenu.classList.remove('open');
+          return;
+        }
+        try {
+          const res = await fetch('/sessions/switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId })
+          });
+          const data = await res.json();
+          if (data.success) {
+            currentActiveSession = sessionId;
+            currentSessions = data.sessions;
+            renderSessionsMobile();
+            chatBox.innerHTML = '';
+            data.history.forEach(h => {
+              appendMessage(h.content, h.sender || 'bot', h);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+            sideMenu.classList.remove('open');
+          }
+        } catch (e) {
+          console.error('Failed to switch session', e);
+        }
+      }
+
+      async function deleteSessionMobile(sessionId) {
+        try {
+          const res = await fetch('/sessions/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId })
+          });
+          const data = await res.json();
+          if (data.success) {
+            currentSessions = data.sessions;
+            currentActiveSession = data.active_session;
+            renderSessionsMobile();
+            chatBox.innerHTML = '';
+            data.history.forEach(h => {
+              appendMessage(h.content, h.sender || 'bot', h);
+            });
+            chatBox.scrollTop = chatBox.scrollHeight;
+          }
+        } catch (e) {
+          console.error('Failed to delete session', e);
+        }
+      }
+
+      newSessionBtnMobile.addEventListener('click', () => {
+        createSessionMobile();
+      });
+
+      // Menu controls
+      const menuBtn = document.getElementById('menuToggle');
+      const sideMenu = document.getElementById('sideMenu');
+      const closeBtn = document.getElementById('closeMenu');
+      
+      menuBtn.onclick = () => sideMenu.classList.add('open');
+      closeBtn.onclick = () => sideMenu.classList.remove('open');
+      
+      document.addEventListener('click', e => {
+        if (sideMenu.classList.contains('open') && !sideMenu.contains(e.target) && e.target !== menuBtn) {
           sideMenu.classList.remove('open');
         }
-      } catch (e) {
-        console.error('Failed to switch session', e);
-      }
-    }
+      });
 
-    async function deleteSessionMobile(sessionId) {
-      try {
-        const res = await fetch('/sessions/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: sessionId })
-        });
-        const data = await res.json();
-        if (data.success) {
-          currentSessions = data.sessions;
-          currentActiveSession = data.active_session;
-          renderSessionsMobile();
-          chatBox.innerHTML = '';
-          data.history.forEach(h => {
-            appendMessage(h.content, h.sender || 'bot');
-          });
-          chatBox.scrollTop = chatBox.scrollHeight;
+      // Drag & drop images
+      chatBox.addEventListener('dragover', (e) => e.preventDefault());
+      chatBox.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const f = e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f && f.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = () => appendMessage(reader.result, 'user');
+          reader.readAsDataURL(f);
         }
-      } catch (e) {
-        console.error('Failed to delete session', e);
-      }
-    }
+      });
 
-    newSessionBtnMobile.addEventListener('click', () => {
-      createSessionMobile();
-    });
-
-    window.addEventListener("DOMContentLoaded", ()=>{
-      const theme = localStorage.getItem("theme");
-      if(theme==="light") document.body.classList.add("light");
-      renderSessionsMobile();
-      history.forEach(({sender, content}) => appendMessage(content, sender));
-    });
-
-    const menuBtn = document.getElementById("menuToggle");
-    const sideMenu = document.getElementById("sideMenu");
-    const closeBtn = document.getElementById("closeMenu");
-    menuBtn.onclick = ()=> sideMenu.classList.add("open");
-    closeBtn.onclick = ()=> sideMenu.classList.remove("open");
-    document.addEventListener("click", e=>{
-      if(sideMenu.classList.contains("open") && !sideMenu.contains(e.target) && e.target!==menuBtn)
-        sideMenu.classList.remove("open");
-    });
-  </script>
-</body>
+      // Initialize on load
+      window.addEventListener('DOMContentLoaded', () => {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'light') document.body.classList.add('light');
+        
+        renderSessionsMobile();
+        
+        // Load history
+        if (Array.isArray(history)) {
+          history.forEach(h => {
+            appendMessage(h.content, h.sender || 'bot', h);
+          });
+        }
+        chatBox.scrollTop = chatBox.scrollHeight;
+        messageInput.focus();
+      });
+    </script>
+  </body>
 </html>

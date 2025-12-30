@@ -11,7 +11,7 @@ import json
 import os
 import time
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
 import smtplib
 from email.mime.text import MIMEText
@@ -33,7 +33,26 @@ USERS_FILE = os.path.join(BASE_DIR, "users.json")
 IMAGES_DIR = os.path.join(BASE_DIR, "user_images")
 os.makedirs(IMAGES_DIR, exist_ok=True)
 
+# User tiers and limits
+USER_TIERS = {
+    "free": {
+        "images_per_8hrs": 2,
+        "name": "Free",
+        "price": "$0"
+    },
+    "premium": {
+        "images_per_8hrs": 10,
+        "name": "Premium",
+        "price": "$9.99/month"
+    },
+    "unlimited": {
+        "images_per_8hrs": 100,  # Essentially unlimited
+        "name": "Unlimited",
+        "price": "$19.99/month"
+    }
+}
 
+# Initialize users.json if it doesn't exist
 if not os.path.exists(USERS_FILE):
     with open(USERS_FILE, "w") as f:
         json.dump({}, f)
@@ -46,8 +65,7 @@ client = OpenAI(
 )
 
 MODEL = "deepseek/deepseek-chat"  # OpenRouter free model (text/chat)
-# At the top of app.py
-IMG_MODEL = "black-forest-labs/flux-1-schnell"  # ByteDance Seedream 4.5 for image generation  # ByteDance Seedream 4.5 for image generation
+IMG_MODEL = "google/gemini-2.5-flash-image-preview"  # Updated image model
 
 PERSONALITIES = {
     "default": "You are a helpful AI assistant.",
@@ -68,6 +86,192 @@ def load_users():
 def save_users(users):
     with open(USERS_FILE, "w") as f:
         json.dump(users, f, indent=2)
+
+
+def migrate_user_to_sessions(user_data):
+    """Migrate old user data structure to new sessions structure"""
+    if "sessions" in user_data:
+        return user_data  # Already migrated
+
+    # Migrate old history to a default session
+    session_id = str(uuid.uuid4())
+    old_history = user_data.get("history", [])
+
+    user_data["sessions"] = {
+        session_id: {
+            "name": "Chat 1",
+            "history": old_history,
+            "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+    }
+    user_data["active_session"] = session_id
+
+    # Remove old history field
+    if "history" in user_data:
+        del user_data["history"]
+
+    return user_data
+
+
+def migrate_to_tier_system(user_data):
+    """Migrate old users to new tier system with image limits"""
+    # Default tier structure
+    tier_structure = {
+        "tier": "free",  # free, premium, unlimited
+        "image_usage": {
+            "last_reset": datetime.now().isoformat(),
+            "count": 0
+        },
+        "upgrade_history": []
+    }
+    
+    # Check if user already has tier data
+    if "tier" not in user_data:
+        # Migrate existing image count if any
+        if "image_count" in user_data:
+            tier_structure["image_usage"]["count"] = user_data.get("image_count", 0)
+            del user_data["image_count"]
+        
+        # Set default tier
+        user_data.update(tier_structure)
+        
+        # Check if user has premium features (migrate from old premium field if exists)
+        if user_data.get("premium", False):
+            user_data["tier"] = "premium"
+    
+    return user_data
+
+
+def get_user_data_with_sessions(gmail):
+    """Get user data and ensure it has sessions structure"""
+    users = load_users()
+    user_data = users.get(gmail, {
+        "sessions": {},
+        "active_session": None,
+        "theme": "dark",
+        "personality": "default",
+        "tier": "free",  # Default tier
+        "image_usage": {
+            "last_reset": datetime.now().isoformat(),
+            "count": 0
+        },
+        "upgrade_history": []
+    })
+
+    # Migrate sessions if needed
+    user_data = migrate_user_to_sessions(user_data)
+    
+    # Migrate to tier system if needed
+    user_data = migrate_to_tier_system(user_data)
+
+    # Ensure active_session exists and is valid
+    if not user_data.get("active_session") or user_data["active_session"] not in user_data.get("sessions", {}):
+        # Create default session if none exists
+        if not user_data.get("sessions"):
+            session_id = str(uuid.uuid4())
+            user_data["sessions"] = {
+                session_id: {
+                    "name": "Chat 1",
+                    "history": [],
+                    "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+            }
+            user_data["active_session"] = session_id
+        else:
+            # Use first available session
+            user_data["active_session"] = list(user_data["sessions"].keys())[0]
+
+    users[gmail] = user_data
+    save_users(users)
+
+    return user_data
+
+
+def get_active_session_history(user_data):
+    """Get history from active session"""
+    active_id = user_data.get("active_session")
+    if not active_id:
+        return []
+    sessions = user_data.get("sessions", {})
+    active_session = sessions.get(active_id, {})
+    return active_session.get("history", [])
+
+
+def can_generate_image(user_data):
+    """Check if user can generate an image based on tier and limits"""
+    tier = user_data.get("tier", "free")
+    image_usage = user_data.get("image_usage", {})
+    
+    # Get user's limits
+    limit = USER_TIERS.get(tier, USER_TIERS["free"])["images_per_8hrs"]
+    
+    # Check reset time (8 hours)
+    last_reset_str = image_usage.get("last_reset")
+    if last_reset_str:
+        try:
+            last_reset = datetime.fromisoformat(last_reset_str)
+            time_since_reset = datetime.now() - last_reset
+            
+            # Reset if 8 hours have passed
+            if time_since_reset.total_seconds() >= 8 * 3600:
+                return {
+                    "allowed": True,
+                    "remaining": limit,
+                    "next_reset": datetime.now() + timedelta(hours=8),
+                    "reset_seconds": 8 * 3600,
+                    "tier": tier
+                }
+        except:
+            # If there's an error parsing timestamp, reset it
+            pass
+    
+    # Check current count
+    current_count = image_usage.get("count", 0)
+    remaining = max(0, limit - current_count)
+    
+    # Calculate next reset time
+    last_reset = datetime.fromisoformat(last_reset_str) if last_reset_str else datetime.now()
+    next_reset = last_reset + timedelta(hours=8)
+    reset_seconds = max(0, int((next_reset - datetime.now()).total_seconds()))
+    
+    return {
+        "allowed": current_count < limit,
+        "remaining": remaining,
+        "next_reset": next_reset,
+        "reset_seconds": reset_seconds,
+        "tier": tier
+    }
+
+
+def increment_image_count(user_data):
+    """Increment user's image count and handle reset logic"""
+    image_usage = user_data.get("image_usage", {})
+    
+    # Check if we need to reset
+    last_reset_str = image_usage.get("last_reset")
+    if last_reset_str:
+        try:
+            last_reset = datetime.fromisoformat(last_reset_str)
+            time_since_reset = datetime.now() - last_reset
+            
+            # Reset if 8 hours have passed
+            if time_since_reset.total_seconds() >= 8 * 3600:
+                image_usage["count"] = 0
+                image_usage["last_reset"] = datetime.now().isoformat()
+        except:
+            # Reset on error
+            image_usage["count"] = 0
+            image_usage["last_reset"] = datetime.now().isoformat()
+    else:
+        # First time usage
+        image_usage["last_reset"] = datetime.now().isoformat()
+        image_usage["count"] = 0
+    
+    # Increment count
+    image_usage["count"] = image_usage.get("count", 0) + 1
+    user_data["image_usage"] = image_usage
+    
+    return user_data
 
 
 def send_email(to_email, subject, body):
@@ -123,84 +327,8 @@ def retry_request(func, retries=3, delay=1, fallback="Unavailable"):
     return fallback
 
 
-
-
 def excontext():
     return f"your in an app called hurairahgpt. website is talktohurairah.com your developed by hurairah and hurairah is a solo develeper building and mantaining this project you can contect us at hurairahgpt.devteam@gmail.com. He is a male"
-
-
-
-
-
-def migrate_user_to_sessions(user_data):
-    """Migrate old user data structure to new sessions structure"""
-    if "sessions" in user_data:
-        return user_data  # Already migrated
-
-    # Migrate old history to a default session
-    session_id = str(uuid.uuid4())
-    old_history = user_data.get("history", [])
-
-    user_data["sessions"] = {
-        session_id: {
-            "name": "Chat 1",
-            "history": old_history,
-            "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-    }
-    user_data["active_session"] = session_id
-
-    # Remove old history field
-    if "history" in user_data:
-        del user_data["history"]
-
-    return user_data
-
-
-def get_user_data_with_sessions(gmail):
-    """Get user data and ensure it has sessions structure"""
-    users = load_users()
-    user_data = users.get(gmail, {
-        "sessions": {},
-        "active_session": None,
-        "theme": "dark",
-        "personality": "default"
-    })
-
-    # Migrate if needed
-    user_data = migrate_user_to_sessions(user_data)
-
-    # Ensure active_session exists and is valid
-    if not user_data.get("active_session") or user_data["active_session"] not in user_data.get("sessions", {}):
-        # Create default session if none exists
-        if not user_data.get("sessions"):
-            session_id = str(uuid.uuid4())
-            user_data["sessions"] = {
-                session_id: {
-                    "name": "Chat 1",
-                    "history": [],
-                    "created": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                }
-            }
-            user_data["active_session"] = session_id
-        else:
-            # Use first available session
-            user_data["active_session"] = list(user_data["sessions"].keys())[0]
-
-    users[gmail] = user_data
-    save_users(users)
-
-    return user_data
-
-
-def get_active_session_history(user_data):
-    """Get history from active session"""
-    active_id = user_data.get("active_session")
-    if not active_id:
-        return []
-    sessions = user_data.get("sessions", {})
-    active_session = sessions.get(active_id, {})
-    return active_session.get("history", [])
 
 
 @app.route("/")
@@ -220,6 +348,10 @@ def root():
     history = get_active_session_history(user_data)
     sessions_list = user_data.get("sessions", {})
     active_session_id = user_data.get("active_session")
+    
+    # Get image generation limits info
+    image_limits = can_generate_image(user_data)
+    tier_info = USER_TIERS.get(user_data.get("tier", "free"), USER_TIERS["free"])
 
     if is_mobile:
         return render_template("moindex.html",
@@ -227,23 +359,29 @@ def root():
                                history=history,
                                theme=user_data["theme"],
                                sessions=sessions_list,
-                               active_session=active_session_id)
+                               active_session=active_session_id,
+                               tier=user_data.get("tier", "free"),
+                               tier_info=tier_info,
+                               image_limits=image_limits)
     return render_template("index.html",
                            gmail=session["gmail"],
                            history=history,
                            theme=user_data["theme"],
                            sessions=sessions_list,
-                           active_session=active_session_id)
+                           active_session=active_session_id,
+                           tier=user_data.get("tier", "free"),
+                           tier_info=tier_info,
+                           image_limits=image_limits)
 
 
 @app.route("/robots.txt")
 def robots():
     return send_from_directory(".", "robots.txt")
 
+
 @app.route("/images/<filename>")
 def serve_image(filename):
     return send_from_directory(IMAGES_DIR, filename)
-
 
 
 @app.route("/deletedata")
@@ -264,12 +402,20 @@ def main_index():
     history = get_active_session_history(user_data)
     sessions_list = user_data.get("sessions", {})
     active_session_id = user_data.get("active_session")
+    
+    # Get image generation limits info
+    image_limits = can_generate_image(user_data)
+    tier_info = USER_TIERS.get(user_data.get("tier", "free"), USER_TIERS["free"])
+    
     return render_template("index.html",
                            gmail=session["gmail"],
                            history=history,
                            theme=user_data["theme"],
                            sessions=sessions_list,
-                           active_session=active_session_id)
+                           active_session=active_session_id,
+                           tier=user_data.get("tier", "free"),
+                           tier_info=tier_info,
+                           image_limits=image_limits)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -297,7 +443,13 @@ def login():
                     },
                     "active_session": session_id,
                     "theme": "dark",
-                    "personality": "default"
+                    "personality": "default",
+                    "tier": "free",
+                    "image_usage": {
+                        "last_reset": datetime.now().isoformat(),
+                        "count": 0
+                    },
+                    "upgrade_history": []
                 }
                 save_users(users)
             return redirect(url_for("root"))
@@ -325,7 +477,13 @@ def login():
                 },
                 "active_session": session_id,
                 "theme": "dark",
-                "personality": "default"
+                "personality": "default",
+                "tier": "free",
+                "image_usage": {
+                    "last_reset": datetime.now().isoformat(),
+                    "count": 0
+                },
+                "upgrade_history": []
             }
             save_users(users)
         return redirect(url_for("root"))
@@ -367,7 +525,13 @@ def signup():
             },
             "active_session": session_id,
             "theme": "dark",
-            "personality": "default"
+            "personality": "default",
+            "tier": "free",
+            "image_usage": {
+                "last_reset": datetime.now().isoformat(),
+                "count": 0
+            },
+            "upgrade_history": []
         }
         save_users(users)
 
@@ -537,6 +701,27 @@ def create_thumbnail(img_data, max_size=(150, 150)):
         return None
 
 
+@app.route("/image/check-limit")
+def check_image_limit():
+    """Check user's current image generation limit"""
+    if "gmail" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    users = load_users()
+    user_data = users.get(session["gmail"], {})
+    
+    # Ensure user has tier data
+    user_data = migrate_to_tier_system(user_data)
+    
+    # Check limits
+    limit_info = can_generate_image(user_data)
+    
+    # Update user data if needed
+    users[session["gmail"]] = user_data
+    save_users(users)
+    
+    return jsonify(limit_info)
+
 
 @app.route("/image", methods=["POST"])
 def image_gen():
@@ -547,6 +732,21 @@ def image_gen():
     if not prompt:
         return jsonify({"error": "No prompt"}), 400
 
+    # Check image generation limits
+    users = load_users()
+    user_data = get_user_data_with_sessions(session["gmail"])
+    
+    # Check if user can generate image
+    limit_check = can_generate_image(user_data)
+    if not limit_check["allowed"]:
+        return jsonify({
+            "error": "Image limit reached\n to upgrade your account visit www.talktohurairah.com/upgrade\n if you do not want to upgrade your account your limit will be reset in 8 hours",
+            "message": f"You have reached your {user_data['tier']} tier limit of {USER_TIERS[user_data['tier']]['images_per_8hrs']} images per 8 hours.",
+            "next_reset": limit_check["next_reset"].isoformat(),
+            "remaining_seconds": limit_check["reset_seconds"],
+            "upgrade_url": "/upgrade"
+        }), 429  # Changed from 400 to 429 (Too Many Requests)
+
     url = "https://openrouter.ai/api/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
@@ -554,7 +754,7 @@ def image_gen():
     }
 
     payload = {
-        "model": "google/gemini-2.5-flash-image-preview",
+        "model": IMG_MODEL,
         "messages": [{"role": "user", "content": prompt}],
         "modalities": ["image", "text"]
     }
@@ -635,11 +835,14 @@ def image_gen():
         except Exception as thumb_err:
             print(f"Thumbnail creation failed: {thumb_err}")
         
+        # Increment image count for user
+        user_data = increment_image_count(user_data)
+        users[session["gmail"]] = user_data
+        save_users(users)
+        
         # Save to user history
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        users = load_users()
-        user_data = get_user_data_with_sessions(session["gmail"])
         active_session_id = user_data.get("active_session")
         
         if active_session_id:
@@ -665,13 +868,21 @@ def image_gen():
             users[session["gmail"]] = user_data
             save_users(users)
         
+        # Get updated limit info
+        limit_info = can_generate_image(user_data)
+        
         return jsonify({
             "success": True,
             "url": f"/images/{filename}",
             "id": img_id,
             "dimensions": f"{width}x{height}",
             "size_kb": round(len(img_data) / 1024, 2),
-            "thumbnail": thumbnail_base64
+            "thumbnail": thumbnail_base64,
+            "limits": {
+                "remaining": limit_info["remaining"],
+                "next_reset": limit_info["next_reset"].isoformat(),
+                "tier": user_data["tier"]
+            }
         })
 
     except requests.exceptions.RequestException as e:
@@ -682,178 +893,110 @@ def image_gen():
         traceback.print_exc()
         return jsonify({"error": f"Image processing failed: {str(e)}"}), 500
 
-@app.route("/image-debug", methods=["POST"])
-def image_gen_debug():
-    """Debug endpoint to see what OpenRouter returns"""
+
+@app.route("/upgrade")
+def upgrade_page():
+    """Upgrade page to show tier options"""
     if "gmail" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    prompt = request.json.get("prompt", "a cute cat").strip()
-    
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": "google/gemini-2.5-flash-image-preview",
-        "messages": [{"role": "user", "content": prompt}],
-        "modalities": ["image", "text"]
-    }
-
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=60)
-        r.raise_for_status()
-        data = r.json()
-        
-        # Return structured info
-        debug_info = {
-            "status": "success",
-            "has_choices": "choices" in data and len(data["choices"]) > 0,
-        }
-        
-        if debug_info["has_choices"]:
-            message = data["choices"][0]["message"]
-            debug_info["has_images"] = "images" in message and len(message["images"]) > 0
-            
-            if debug_info["has_images"]:
-                first_image = message["images"][0]
-                debug_info["image_structure"] = {
-                    "type": type(first_image).__name__,
-                    "keys": list(first_image.keys()) if isinstance(first_image, dict) else "N/A"
-                }
-                
-                if isinstance(first_image, dict) and "image_url" in first_image:
-                    image_url = first_image["image_url"]
-                    debug_info["image_url_structure"] = {
-                        "type": type(image_url).__name__,
-                        "keys": list(image_url.keys()) if isinstance(image_url, dict) else "N/A"
-                    }
-                    
-                    if isinstance(image_url, dict) and "url" in image_url:
-                        url_value = image_url["url"]
-                        debug_info["url_info"] = {
-                            "is_data_url": url_value.startswith("data:image/") if isinstance(url_value, str) else False,
-                            "url_preview": str(url_value)[:100] + "..." if isinstance(url_value, str) and len(url_value) > 100 else str(url_value)
-                        }
-        
-        return jsonify(debug_info)
-
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }), 500
-
-@app.route("/test-image", methods=["GET"])
-def test_image():
-    """Test endpoint to see OpenRouter response format"""
-    test_prompt = "a cute cat"
-    
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY')}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "model": "google/gemini-2.5-flash-image-preview",
-        "messages": [{"role": "user", "content": test_prompt}],
-        "modalities": ["image", "text"]
-    }
-    
-    try:
-        r = requests.post(url, headers=headers, json=payload, timeout=60)
-        r.raise_for_status()
-        data = r.json()
-        
-        # Save response for inspection
-        with open("openrouter_response.json", "w") as f:
-            json.dump(data, f, indent=2)
-        
-        # Return just the structure (not the full base64)
-        if "choices" in data and len(data["choices"]) > 0:
-            choice = data["choices"][0]
-            if "message" in choice:
-                message = choice["message"]
-                
-                # Create a safe copy without large base64
-                safe_message = {}
-                for key, value in message.items():
-                    if key == "content" and isinstance(value, str):
-                        # Truncate base64 data
-                        if "base64" in value.lower():
-                            safe_message[key] = value[:200] + "... [TRUNCATED]"
-                        else:
-                            safe_message[key] = value[:500] + "..."
-                    elif key == "images":
-                        safe_message[key] = f"Array with {len(value)} items"
-                    else:
-                        safe_message[key] = str(value)[:200] + "..." if isinstance(value, str) else value
-                
-                return jsonify({
-                    "status": "success",
-                    "response_structure": safe_message,
-                    "saved_to": "openrouter_response.json"
-                })
-        
-        return jsonify({"status": "success", "data": data})
-    
-    except Exception as e:
-        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
-
-@app.route("/image/thumbnail/<image_id>")
-def get_image_thumbnail(image_id):
-    """Get thumbnail for an image"""
-    if "gmail" not in session:
-        return jsonify({"error": "Unauthorized"}), 401
+        return redirect(url_for("login"))
     
     users = load_users()
     user_data = users.get(session["gmail"], {})
+    user_data = migrate_to_tier_system(user_data)
     
-    # Check if image exists in user's data
-    if "images" in user_data and image_id in user_data["images"]:
-        thumbnail = user_data["images"][image_id].get("thumbnail")
-        if thumbnail:
-            # Return as data URL
-            return jsonify({
-                "thumbnail": f"data:image/jpeg;base64,{thumbnail}",
-                "image_id": image_id
-            })
+    current_tier = user_data.get("tier", "free")
+    limit_info = can_generate_image(user_data)
     
-    return jsonify({"error": "Thumbnail not found"}), 404
+    return render_template("upgrade.html",
+                          gmail=session["gmail"],
+                          current_tier=current_tier,
+                          user_tiers=USER_TIERS,
+                          limit_info=limit_info)
 
 
-@app.route("/user/images")
-def get_user_images():
-    """Get all images for current user"""
+@app.route("/upgrade/process", methods=["POST"])
+def process_upgrade():
+    """Process tier upgrade (simulated - no real payment)"""
     if "gmail" not in session:
         return jsonify({"error": "Unauthorized"}), 401
     
+    new_tier = request.json.get("tier")
+    if new_tier not in USER_TIERS:
+        return jsonify({"error": "Invalid tier"}), 400
+    
     users = load_users()
     user_data = users.get(session["gmail"], {})
+    user_data = migrate_to_tier_system(user_data)
     
-    images = user_data.get("images", {})
+    current_tier = user_data.get("tier", "free")
     
-    # Return only metadata (not thumbnails) for list view
-    image_list = []
-    for img_id, img_data in images.items():
-        image_list.append({
-            "id": img_id,
-            "filename": img_data.get("filename"),
-            "prompt": img_data.get("prompt", ""),
-            "created": img_data.get("created"),
-            "dimensions": img_data.get("dimensions", "Unknown"),
-            "size_kb": img_data.get("size_kb", 0),
-            "url": f"/images/{img_data.get('filename')}"
-        })
+    # Check if upgrading to same or lower tier
+    if new_tier == current_tier:
+        return jsonify({"error": "You are already on this tier"}), 400
     
-    return jsonify({"images": image_list})
+    # In a real app, you would process payment here
+    # For now, just update the tier
+    
+    # Record upgrade history
+    upgrade_history = user_data.get("upgrade_history", [])
+    upgrade_history.append({
+        "from_tier": current_tier,
+        "to_tier": new_tier,
+        "timestamp": datetime.now().isoformat(),
+        "price": USER_TIERS[new_tier]["price"]
+    })
+    
+    # Update user tier
+    user_data["tier"] = new_tier
+    
+    # Reset image count when upgrading
+    user_data["image_usage"] = {
+        "last_reset": datetime.now().isoformat(),
+        "count": 0
+    }
+    
+    # Save changes
+    users[session["gmail"]] = user_data
+    save_users(users)
+    
+    return jsonify({
+        "success": True,
+        "message": f"Upgraded to {USER_TIERS[new_tier]['name']} tier successfully!",
+        "new_tier": new_tier,
+        "tier_info": USER_TIERS[new_tier]
+    })
 
 
-
+@app.route("/user/profile")
+def user_profile():
+    """User profile page showing tier and usage"""
+    if "gmail" not in session:
+        return redirect(url_for("login"))
+    
+    users = load_users()
+    user_data = users.get(session["gmail"], {})
+    user_data = migrate_to_tier_system(user_data)
+    
+    limit_info = can_generate_image(user_data)
+    current_tier = user_data.get("tier", "free")
+    
+    # Format next reset time nicely
+    next_reset = limit_info.get("next_reset")
+    if isinstance(next_reset, datetime):
+        next_reset_str = next_reset.strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        next_reset_str = str(next_reset)
+    
+    return jsonify({
+        "email": session["gmail"],
+        "tier": current_tier,
+        "tier_name": USER_TIERS[current_tier]["name"],
+        "images_used": user_data.get("image_usage", {}).get("count", 0),
+        "images_limit": USER_TIERS[current_tier]["images_per_8hrs"],
+        "images_remaining": limit_info["remaining"],
+        "next_reset": next_reset_str,
+        "upgrade_history": user_data.get("upgrade_history", [])
+    })
 
 
 @app.route("/theme", methods=["POST"])
@@ -888,12 +1031,20 @@ def moindex():
     history = get_active_session_history(user_data)
     sessions_list = user_data.get("sessions", {})
     active_session_id = user_data.get("active_session")
+    
+    # Get image generation limits info
+    image_limits = can_generate_image(user_data)
+    tier_info = USER_TIERS.get(user_data.get("tier", "free"), USER_TIERS["free"])
+    
     return render_template("moindex.html",
                            gmail=session["gmail"],
                            history=history,
                            theme=user_data["theme"],
                            sessions=sessions_list,
-                           active_session=active_session_id)
+                           active_session=active_session_id,
+                           tier=user_data.get("tier", "free"),
+                           tier_info=tier_info,
+                           image_limits=image_limits)
 
 
 @app.route("/forgot", methods=["GET"])
