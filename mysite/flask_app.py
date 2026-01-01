@@ -64,8 +64,8 @@ client = OpenAI(
     base_url=os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 )
 
-MODEL = "deepseek/deepseek-r1-0528:free"  # OpenRouter free model (text/chat)
-IMG_MODEL = "google/gemini-2.5-flash-image-preview"  # Updated image model
+MODEL = "nvidia/nemotron-3-nano-30b-a3b:free"  # OpenRouter free model (text/chat)
+IMG_MODEL = "bytedance-seed/seedream-4.5"  # Updated image model
 
 PERSONALITIES = {
     "default": "You are a helpful AI assistant.",
