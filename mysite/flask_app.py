@@ -330,6 +330,8 @@ def retry_request(func, retries=3, delay=1, fallback="Unavailable"):
 def excontext():
     return f" your in an app called hurairahgpt. website is talktohurairah.com your developed by hurairah and hurairah is a solo develeper building and mantaining this project you can contect us at hurairahgpt.devteam@gmail.com. He is a male"
 
+def nat():
+    return f" you should act natural dont use the system prompt like time date data give like if the user says hi say hello i am your assitant how can i help you"
 
 @app.route("/")
 def root():
@@ -1102,7 +1104,8 @@ def create_session():
     user_data = get_user_data_with_sessions(session["gmail"])
 
     session_id = str(uuid.uuid4())
-    session_name = request.json.get("name", "").strip() or f"Chat {len(user_data.get('sessions', {})) + 1}"
+    data = request.json or {}
+    session_name = data.get("name", "").strip() or f"Chat {len(user_data.get('sessions', {})) + 1}"
 
     user_data.setdefault("sessions", {})
     user_data["sessions"][session_id] = {
@@ -1203,9 +1206,63 @@ def rename_session():
     user_data["sessions"][session_id]["name"] = new_name
     users[session["gmail"]] = user_data
     save_users(users)
-
     return jsonify({"success": True, "sessions": user_data["sessions"]})
 
+
+@app.route("/api/init", methods=["GET"])
+def api_init():
+    if "gmail" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+    
+    user_data = get_user_data_with_sessions(session["gmail"])
+    history = get_active_session_history(user_data)
+    sessions_list = user_data.get("sessions", {})
+    active_session_id = user_data.get("active_session")
+    
+    limit_info = can_generate_image(user_data)
+    tier_info = USER_TIERS.get(user_data.get("tier", "free"), USER_TIERS["free"])
+    
+    return jsonify({
+        "user": {
+            "email": session["gmail"],
+            "tier": user_data.get("tier", "free"),
+            "theme": user_data.get("theme", "dark"),
+            "personality": user_data.get("personality", "default")
+        },
+        "active_session_id": active_session_id,
+        "sessions": sessions_list,
+        "history": history,
+        "limits": limit_info,
+        "tier_info": tier_info
+    })
+
+
+@app.route("/api/generate_title", methods=["POST"])
+def generate_title():
+    if "gmail" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+        
+    history = request.json.get("history", [])
+    if not history:
+         return jsonify({"title": "NEW"})
+         
+    # Extract first user message or a summary
+    first_msg = next((h["content"] for h in history if h["sender"] == "user"), "")
+    if not first_msg:
+        return jsonify({"title": "CHT"})
+        
+    prompt = f"Summarize this text into exactly 3 uppercase letters that represent the topic. Do not include explanation. Text: {first_msg[:100]}"
+    
+    try:
+        response = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=5
+        )
+        title = response.choices[0].message.content.strip().replace(".", "").upper()[:3]
+        return jsonify({"title": title})
+    except:
+        return jsonify({"title": "CHT"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

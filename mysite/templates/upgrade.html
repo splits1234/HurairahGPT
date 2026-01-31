@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -398,11 +399,11 @@
             .tiers-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .tier-card.popular {
                 transform: none;
             }
-            
+
             .plan-footer {
                 flex-direction: column;
                 gap: 20px;
@@ -411,6 +412,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -444,17 +446,18 @@
                     {{ current_tier|title }}
                 </div>
             </div>
-            
+
             <div class="limit-display">
                 <div class="limit-text">
-                    <strong>Image Usage:</strong> 
+                    <strong>Image Usage:</strong>
                     <span class="limit-count">{{ limit_info.remaining }}</span> images remaining
                 </div>
                 <div class="reset-timer">
-                    Resets in: <span id="timer">{{ limit_info.reset_seconds // 3600 }}h {{ (limit_info.reset_seconds % 3600) // 60 }}m</span>
+                    Resets in: <span id="timer">{{ limit_info.reset_seconds // 3600 }}h {{ (limit_info.reset_seconds %
+                        3600) // 60 }}m</span>
                 </div>
             </div>
-            
+
             <div class="plan-features">
                 <div class="feature">
                     <i class="fas fa-image"></i>
@@ -469,7 +472,7 @@
                     <span>Multiple AI personalities</span>
                 </div>
             </div>
-            
+
             <div class="plan-footer">
                 <div>
                     <strong>Price:</strong> {{ user_tiers[current_tier].price }}
@@ -488,13 +491,13 @@
                 {% if tier_key == 'premium' %}
                 <div class="popular-badge">MOST POPULAR</div>
                 {% endif %}
-                
+
                 <div class="tier-header">
                     <h3 class="tier-name">{{ tier_data.name }}</h3>
                     <div class="tier-price">{{ tier_data.price }}</div>
                     <div class="tier-period">per month</div>
                 </div>
-                
+
                 <div class="tier-features">
                     <div class="tier-feature">
                         <i class="fas fa-check-circle"></i>
@@ -523,16 +526,19 @@
                     </div>
                     {% endif %}
                 </div>
-                
+
                 <div class="tier-action">
                     {% if tier_key == current_tier %}
                     <button class="upgrade-btn disabled" disabled>Current Plan</button>
-                    {% elif (tier_key == 'premium' and current_tier == 'free') or (tier_key == 'unlimited' and current_tier != 'unlimited') %}
+                    {% elif (tier_key == 'premium' and current_tier == 'free') or (tier_key == 'unlimited' and
+                    current_tier != 'unlimited') %}
                     <button onclick="showUpgradeModal('{{ tier_key }}')" class="upgrade-btn">
-                        {% if current_tier == 'free' %}Upgrade to {{ tier_data.name }}{% else %}Switch to {{ tier_data.name }}{% endif %}
+                        {% if current_tier == 'free' %}Upgrade to {{ tier_data.name }}{% else %}Switch to {{
+                        tier_data.name }}{% endif %}
                     </button>
                     {% else %}
-                    <button onclick="showUpgradeModal('{{ tier_key }}')" class="upgrade-btn secondary">Downgrade</button>
+                    <button onclick="showUpgradeModal('{{ tier_key }}')"
+                        class="upgrade-btn secondary">Downgrade</button>
                     {% endif %}
                 </div>
             </div>
@@ -557,9 +563,9 @@
     </div>
 
     <script>
-        const userTiers = {{ user_tiers|tojson }};
+        const userTiers = {{ user_tiers| tojson }};
         let selectedTier = '';
-        
+
         // Update timer
         function updateTimer() {
             const timerElement = document.getElementById('timer');
@@ -567,13 +573,13 @@
                 const parts = timerElement.textContent.split(/[hm]/);
                 let hours = parseInt(parts[0]) || 0;
                 let minutes = parseInt(parts[1]) || 0;
-                
+
                 minutes--;
                 if (minutes < 0) {
                     minutes = 59;
                     hours--;
                 }
-                
+
                 if (hours < 0) {
                     // Timer expired, reload page
                     location.reload();
@@ -582,33 +588,33 @@
                 }
             }
         }
-        
+
         // Update timer every minute
         setInterval(updateTimer, 60000);
-        
+
         function showUpgradeModal(tierKey) {
             selectedTier = tierKey;
             const tierData = userTiers[tierKey];
-            
+
             document.getElementById('modalTierName').textContent = tierData.name;
             document.getElementById('modalImageCount').textContent = tierData.images_per_8hrs;
-            
+
             const modal = document.getElementById('upgradeModal');
             modal.style.display = 'flex';
         }
-        
+
         function hideModal() {
             const modal = document.getElementById('upgradeModal');
             modal.style.display = 'none';
         }
-        
+
         function processUpgrade() {
             // Show loading state
             const confirmBtn = document.querySelector('.modal-btn.confirm');
             const originalText = confirmBtn.textContent;
             confirmBtn.textContent = 'Processing...';
             confirmBtn.disabled = true;
-            
+
             // Send upgrade request
             fetch('/upgrade/process', {
                 method: 'POST',
@@ -617,28 +623,28 @@
                 },
                 body: JSON.stringify({ tier: selectedTier })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message);
-                    // Redirect to home page
-                    window.location.href = '/';
-                } else {
-                    alert('Error: ' + data.error);
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        // Redirect to home page
+                        window.location.href = '/';
+                    } else {
+                        alert('Error: ' + data.error);
+                        confirmBtn.textContent = originalText;
+                        confirmBtn.disabled = false;
+                        hideModal();
+                    }
+                })
+                .catch(error => {
+                    alert('An error occurred: ' + error);
                     confirmBtn.textContent = originalText;
                     confirmBtn.disabled = false;
-                    hideModal();
-                }
-            })
-            .catch(error => {
-                alert('An error occurred: ' + error);
-                confirmBtn.textContent = originalText;
-                confirmBtn.disabled = false;
-            });
+                });
         }
-        
+
         // Close modal when clicking outside
-        window.onclick = function(event) {
+        window.onclick = function (event) {
             const modal = document.getElementById('upgradeModal');
             if (event.target === modal) {
                 hideModal();
@@ -646,4 +652,5 @@
         }
     </script>
 </body>
+
 </html>
