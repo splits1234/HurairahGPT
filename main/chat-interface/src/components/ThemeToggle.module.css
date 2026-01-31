@@ -1,0 +1,15 @@
+.toggleBtn {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    transition: background-color 0.2s ease;
+}
+
+.toggleBtn:hover {
+    background-color: var(--bg-surface);
+}

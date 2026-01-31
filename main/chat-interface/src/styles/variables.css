@@ -1,0 +1,73 @@
+:root {
+  /* Animation Timing */
+  --transition-speed: 0.3s;
+  --transition-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+[data-theme='dark'] {
+  /* Backgrounds */
+  --bg-app: #0A0A0A; /* Near black, not pure black */
+  --bg-sidebar: #0F0F0F; /* Slightly uplifted */
+  --bg-surface: #1A1A1A; /* Cards/Panels */
+  --bg-input: #141414;
+  --bg-input-focus: #1A1A1A;
+  
+  /* Text */
+  --text-primary: #EDEDED;
+  --text-secondary: #A1A1A1;
+  --text-tertiary: #525252;
+  
+  /* Borders */
+  --border-subtle: #262626;
+  --border-focus: #404040;
+  
+  /* Accents */
+  --accent-primary: #FFFFFF;
+  --accent-glow: rgba(255, 255, 255, 0.1);
+  
+  /* Status */
+  --status-indicator: #333333;
+}
+
+[data-theme='light'] {
+  /* Backgrounds */
+  --bg-app: #F9FAFB; /* Soft warm gray/off-white */
+  --bg-sidebar: #F3F4F6;
+  --bg-surface: #FFFFFF;
+  --bg-input: #FFFFFF;
+  --bg-input-focus: #FFFFFF;
+  
+  /* Text */
+  --text-primary: #111827; /* Deep gray/near black */
+  --text-secondary: #6B7280;
+  --text-tertiary: #9CA3AF;
+  
+  /* Borders */
+  --border-subtle: #E5E7EB;
+  --border-focus: #D1D5DB;
+  
+  /* Accents */
+  --accent-primary: #000000;
+  --accent-glow: rgba(0, 0, 0, 0.05);
+  
+  /* Status */
+  --status-indicator: #E5E7EB;
+  
+  /* Shadows (Light mode exclusive usually) */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  transition: background-color var(--transition-speed) var(--transition-ease),
+              color var(--transition-speed) var(--transition-ease);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

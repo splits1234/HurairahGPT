@@ -1,0 +1,112 @@
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 720px;
+    padding: 0 20px;
+}
+
+.inputWrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 56px;
+    background-color: var(--bg-input);
+    border-radius: 28px;
+    /* Full pill shape */
+    padding: 0 6px 0 16px;
+    border: 1px solid var(--border-subtle);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.inputWrapper:focus-within {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.attachBtn {
+    color: var(--text-tertiary);
+    padding: 8px;
+    border-radius: 50%;
+    transition: color 0.2s, background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.attachBtn:hover {
+    color: var(--text-primary);
+    background-color: var(--bg-surface);
+}
+
+.input {
+    flex: 1;
+    height: 100%;
+    padding: 0 12px;
+    font-size: 16px;
+    color: var(--text-primary);
+    background: transparent;
+}
+
+.input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.rightActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-right: 6px;
+}
+
+.modeText {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.voiceBtn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--bg-surface);
+    /* Slightly distinct */
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s ease;
+}
+
+.voiceBtn:active {
+    transform: scale(0.95);
+}
+
+/* Bottom Action Pills */
+.actionPills {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.actionPill {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background-color: transparent;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.actionPill:hover {
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+    border-color: var(--border-focus);
+}
