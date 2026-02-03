@@ -1,52 +1,138 @@
+/**
+ * HurairahGPT - Input Bar Component
+ * ==================================
+ * 
+ * A styled input component for the HurairahGPT chat interface.
+ * Provides a modern, accessible text input with submit functionality.
+ * 
+ * Features:
+ * - Animated input field with focus states
+ * - Keyboard support (Enter to submit)
+ * - File attachment button (UI only)
+ * - Voice input button (UI only)
+ * - Smooth transitions and micro-interactions
+ * 
+ * @component
+ * @version 1.0.0
+ * @author Hurairah
+ */
+
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Paperclip, Mic, ArrowUp } from 'lucide-react';
 import styles from './InputBar.module.css';
 
+/**
+ * InputBar Component Props
+ * @typedef {Object} InputBarProps
+ * @property {Function} onSend - Callback function when message is sent
+ */
+
+/**
+ * InputBar - Chat Message Input Component
+ * 
+ * @param {InputBarProps} props - Component properties
+ * @returns {JSX.Element} Rendered input bar component
+ */
 export function InputBar({ onSend }) {
-    const [text, setText] = useState('');
+  const [inputText, setInputText] = useState('');
+  const [isFocused, setIsFocused] = useState(false);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!text.trim()) return;
-        onSend(text);
-        setText('');
-    };
+  /**
+   * Handle form submission
+   * 
+   * @param {Event} event - Form submit event
+   */
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    
+    // Only send if text is not empty
+    if (inputText.trim()) {
+      onSend(inputText.trim());
+      setInputText('');
+    }
+  };
 
-    const handleKeyDown = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit(e);
-        }
-    };
+  /**
+   * Handle keyboard input
+   * Supports Enter to submit, Shift+Enter for new line (disabled)
+   * 
+   * @param {KeyboardEvent} event - Keyboard event
+   */
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSubmit(event);
+    }
+  };
 
-    return (
-        <div className={styles.container}>
-            {/* Central Input Pill */}
-            <motion.div
-                className={styles.inputWrapper}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-            >
-                <button className={styles.attachBtn} aria-label="Attach file">
-                    <Paperclip size={20} />
-                </button>
+  return (
+    <div className={styles.container}>
+      {/* Animated Input Pill Container */}
+      <motion.div
+        className={styles.inputWrapper}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.2 }}
+      >
+        {/* Attachment Button */}
+        <button
+          className={styles.attachButton}
+          aria-label="Attach file"
+          type="button"
+        >
+          <Paperclip size={20} />
+        </button>
 
-                <input
-                    type="text"
-                    placeholder="How can I help you today?"
-                    className={styles.input}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                />
+        {/* Main Text Input */}
+        <input
+          type="text"
+          placeholder="Send a message to HurairahGPT..."
+          className={styles.textInput}
+          value={inputText}
+          onChange={(event) => setInputText(event.target.value)}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          aria-label="Message input"
+          disabled={false}
+        />
 
-                <div className={styles.rightActions}>
-                    <button className={styles.voiceBtn} onClick={handleSubmit} aria-label="Send">
-                        <ArrowUp size={20} />
-                    </button>
-                </div>
-            </motion.div>
+        {/* Right Action Buttons */}
+        <div className={styles.rightActions}>
+          {/* Voice Input Button (UI only) */}
+          <button
+            className={styles.voiceButton}
+            aria-label="Voice input"
+            type="button"
+          >
+            <Mic size={20} />
+          </button>
+
+          {/* Send Button */}
+          <motion.button
+            className={styles.sendButton}
+            onClick={handleSubmit}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            disabled={!inputText.trim()}
+            aria-label="Send message"
+            type="button"
+          >
+            <ArrowUp size={20} />
+          </motion.button>
         </div>
-    );
+      </motion.div>
+
+      {/* Helper Text */}
+      <motion.p
+        className={styles.helperText}
+        animate={{ opacity: isFocused ? 1 : 0.5 }}
+      >
+        Press Enter to send, Shift+Enter for new line
+      </motion.p>
+    </div>
+  );
 }
+
+export default InputBar;
