@@ -69,5 +69,4 @@ body {
               color var(--transition-speed) var(--transition-ease);
   margin: 0;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }

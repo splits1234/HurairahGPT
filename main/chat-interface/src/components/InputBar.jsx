@@ -9,7 +9,7 @@
  * - Animated input field with focus states
  * - Keyboard support (Enter to submit)
  * - File attachment button (UI only)
- * - Voice input button (UI only)
+ * - New chat button
  * - Smooth transitions and micro-interactions
  * 
  * @component
@@ -17,15 +17,16 @@
  * @author Hurairah
  */
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Paperclip, Mic, ArrowUp } from 'lucide-react';
+import { Paperclip, ArrowUp, Plus } from 'lucide-react';
 import styles from './InputBar.module.css';
 
 /**
  * InputBar Component Props
  * @typedef {Object} InputBarProps
  * @property {Function} onSend - Callback function when message is sent
+ * @property {Function} [onNewChat] - Callback function for new chat button
  */
 
 /**
@@ -34,9 +35,10 @@ import styles from './InputBar.module.css';
  * @param {InputBarProps} props - Component properties
  * @returns {JSX.Element} Rendered input bar component
  */
-export function InputBar({ onSend }) {
+export function InputBar({ onSend, onNewChat }) {
   const [inputText, setInputText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const fileInputRef = useRef(null);
 
   /**
    * Handle form submission
@@ -63,6 +65,15 @@ export function InputBar({ onSend }) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       handleSubmit(event);
+    }
+  };
+
+  /**
+   * Handle new chat button click
+   */
+  const handleNewChat = () => {
+    if (onNewChat) {
+      onNewChat();
     }
   };
 
@@ -100,13 +111,14 @@ export function InputBar({ onSend }) {
 
         {/* Right Action Buttons */}
         <div className={styles.rightActions}>
-          {/* Voice Input Button (UI only) */}
+          {/* New Chat Button */}
           <button
-            className={styles.voiceButton}
-            aria-label="Voice input"
+            className={styles.newChatButton}
+            onClick={handleNewChat}
+            aria-label="New chat"
             type="button"
           >
-            <Mic size={20} />
+            <Plus size={20} />
           </button>
 
           {/* Send Button */}

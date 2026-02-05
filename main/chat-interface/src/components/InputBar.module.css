@@ -27,7 +27,7 @@
     box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
-.attachBtn {
+.attachButton {
     color: var(--text-tertiary);
     padding: 8px;
     border-radius: 50%;
@@ -37,7 +37,7 @@
     justify-content: center;
 }
 
-.attachBtn:hover {
+.attachButton:hover {
     color: var(--text-primary);
     background-color: var(--bg-surface);
 }
@@ -60,6 +60,7 @@
     align-items: center;
     gap: 12px;
     padding-right: 6px;
+    margin-left: auto;
 }
 
 .modeText {
@@ -69,21 +70,51 @@
     cursor: pointer;
 }
 
-.voiceBtn {
+.newChatButton {
     width: 40px;
     height: 40px;
     border-radius: 50%;
     background-color: var(--bg-surface);
-    /* Slightly distinct */
-    color: var(--text-primary);
+    color: var(--text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.1s ease;
+    transition: transform 0.1s ease, background-color 0.2s ease, color 0.2s ease;
 }
 
-.voiceBtn:active {
+.newChatButton:hover {
+    background-color: var(--accent-primary);
+    color: white;
+}
+
+.newChatButton:active {
     transform: scale(0.95);
+}
+
+.sendButton {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--accent-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.1s ease, background-color 0.2s ease;
+}
+
+.sendButton:hover:not(:disabled) {
+    background-color: var(--accent-hover);
+}
+
+.sendButton:active {
+    transform: scale(0.95);
+}
+
+.sendButton:disabled {
+    background-color: var(--bg-surface);
+    color: var(--text-tertiary);
+    cursor: not-allowed;
 }
 
 /* Bottom Action Pills */

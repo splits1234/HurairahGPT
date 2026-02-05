@@ -10,14 +10,14 @@ The HurairahGPT backend demonstrates solid Flask architecture with clean API org
 
 ### 1.1 Architecture Assessment
 
-| Aspect | Current State | Grade | Notes |
-|--------|--------------|-------|-------|
-| Flask Structure | Modular routes | B | Clean separation of concerns |
-| API Design | RESTful patterns | B | Good endpoint organization |
-| State Management | Session-based | C | Works but limited |
-| Error Handling | Basic try-catch | C | Missing standardized errors |
-| Logging | Console output only | D | No structured logging |
-| Testing | None mentioned | F | Critical gap |
+| Aspect           | Current State       | Grade | Notes                        |
+|------------------|---------------------|-------|------------------------------|
+| Flask Structure  | Modular routes      |   A   | Clean separation of concerns |
+| API Design       | RESTful patterns    |   B   | Good endpoint organization   |
+| State Management | Session-based       |   C   | Works but limited            |
+| Error Handling   | Basic try-catch     |   C   | Missing standardized errors  |
+| Logging          | Console output only |   D   | No structured logging        |
+| Testing          | None mentioned      |   F   | Critical gap                 |
 
 ### 1.2 Strengths
 
@@ -575,29 +575,29 @@ raise APIError("Unauthorized", "UNAUTHORIZED", 401)
 ### 5.1 Target Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Load Balancer                             │
-│                    (CloudFlare/HAProxy)                          │
-└─────────────────────────┬───────────────────────────────────────┘
-                          │
-          ┌───────────────┼───────────────┐
-          ▼               ▼               ▼
-    ┌──────────┐    ┌──────────┐    ┌──────────┐
-    │ Flask 1  │    │ Flask 2  │    │ Flask N  │
-    │ (Gunicorn│    │ (Gunicorn│    │ (Gunicorn│
-    │  Workers)│    │  Workers)│    │  Workers)│
-    └────┬─────┘    └────┬─────┘    └────┬─────┘
-         │               │               │
-         └───────────────┼───────────────┘
+┌────────────────────────────────────────────────┐
+│                  Load Balancer                 │
+│              (CloudFlare/HAProxy)              │
+└────────────────────────┬───────────────────────┘
                          │
-    ┌────────────────────┼────────────────────┐
-    │                    │                    │
-    ▼                    ▼                    ▼
-┌─────────┐       ┌──────────┐        ┌──────────┐
+          ┌──────────────┼───────────────┐
+          ▼              ▼               ▼
+    ┌──────────┐    ┌─────────┐    ┌──────────┐
+    │ Flask 1  │    │ Flask 2 │    │ Flask N  │
+    │ (Gunicorn│    │(Gunicorn│    │ (Gunicorn│
+    │  Workers)│    │ Workers)│    │  Workers)│
+    └────┬─────┘    └───┬─────┘    └────┬─────┘
+         │              │               │
+         └──────────────┼───────────────┘
+                        │
+    ┌───────────────────┼──────────────────┐
+    │                   │                  │
+    ▼                   ▼                  ▼
+┌──────────┐      ┌──────────┐        ┌──────────┐
 │PostgreSQL│      │   Redis  │        │  S3/R2   │
 │ (Primary)│      │  (Cache/ │        │ (Images) │
-└─────────┘      │  Queue)   │        └──────────┘
-                 └──────────┘
+└──────────┘      │  Queue)  │        └──────────┘
+                  └──────────┘
 ```
 
 ### 5.2 Component Specifications
@@ -862,14 +862,14 @@ def test_protected_route_requires_auth(client):
 
 ### 8.2 Coverage Targets
 
-| Component | Target Coverage |
-|-----------|----------------|
-| Authentication | 95% |
-| Session Management | 90% |
-| Chat API | 85% |
-| Image Generation | 90% |
-| Rate Limiting | 95% |
-| **Overall Target** | **85%** |
+| Component          | Target Coverage |
+|--------------------|-----------------|
+| Authentication     |       95%       |
+| Session Management |       90%       |
+| Chat API           |       85%       |
+| Image Generation   |       90%       |
+| Rate Limiting      |       95%       |
+| **Overall Target** |     **85%**     |
 
 ---
 

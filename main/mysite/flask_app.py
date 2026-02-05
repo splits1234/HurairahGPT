@@ -205,7 +205,7 @@ openai_client = OpenAI(
 )
 
 # AI Model Configuration
-CHAT_MODEL: str = "nvidia/nemotron-3-nano-30b-a3b:free"
+CHAT_MODEL: str = "deepseek/deepseek-r1-0528:free"
 IMAGE_MODEL: str = "bytedance-seed/seedream-4.5"
 
 # =============================================================================
@@ -1494,8 +1494,30 @@ def generate_image():
 
 
     try:
+        # Configure OpenRouter API request for image generation
+        api_key = os.getenv("OPENROUTER_API_KEY")
+        if not api_key:
+            return jsonify({"error": "OpenRouter API key not configured"}), 500
+        
+        image_url = os.getenv("OPENROUTER_IMAGE_URL", "https://openrouter.ai/api/v1/images/generations")
+        
+        payload = {
+            "model": IMAGE_MODEL,
+            "prompt": prompt,
+            "n": 1,
+            "size": "1024x1024",
+            "response_format": "b64_json"
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://talktohurairah.com",
+            "X-Title": "HurairahGPT"
+        }
+        
         print(f"Sending image generation request for prompt: {prompt}")
-        r = requests.post(url, headers=headers, json=payload, timeout=120)
+        r = requests.post(image_url, headers=headers, json=payload, timeout=120)
         r.raise_for_status()
         data = r.json()
         
@@ -1564,7 +1586,7 @@ def generate_image():
         # Create thumbnail
         thumbnail_base64 = None
         try:
-            thumbnail_base64 = create_thumbnail(img_data)
+            thumbnail_base64 = create_image_thumbnail(img_data)
             print(f"Created thumbnail ({len(thumbnail_base64) if thumbnail_base64 else 0} chars)")
         except Exception as thumb_err:
             print(f"Thumbnail creation failed: {thumb_err}")
@@ -1660,7 +1682,7 @@ def process_upgrade():
     
     users = load_users()
     user_data = users.get(session["gmail"], {})
-    user_data = migrate_to_tier_system(user_data)
+    user_data = migrate_user_to_tier_system(user_data)
     
     current_tier = user_data.get("tier", "free")
     
@@ -1709,7 +1731,7 @@ def user_profile():
     
     users = load_users()
     user_data = users.get(session["gmail"], {})
-    user_data = migrate_to_tier_system(user_data)
+    user_data = migrate_user_to_tier_system(user_data)
     
     limit_info = check_image_generation_allowance(user_data)
     current_tier = user_data.get("tier", "free")
@@ -1958,29 +1980,66 @@ def api_init():
 
 @app.route("/api/generate_title", methods=["POST"])
 def generate_title():
+    logger.info("[TITLE_GEN] Endpoint called")
+    
     if "gmail" not in session:
+        logger.warning("[TITLE_GEN] Unauthorized access attempt")
         return jsonify({"error": "Unauthorized"}), 401
         
     history = request.json.get("history", [])
+    logger.info(f"[TITLE_GEN] Received history: {len(history)} messages")
+    
     if not history:
-         return jsonify({"title": "NEW"})
-         
+        logger.info("[TITLE_GEN] Empty history, returning 'NEW'")
+        return jsonify({"title": "NEW"})
+          
     # Extract first user message or a summary
     first_msg = next((h["content"] for h in history if h["sender"] == "user"), "")
+    if first_msg:
+        msg_display = first_msg[:50] + "..." if len(first_msg) > 50 else first_msg
+        logger.info(f"[TITLE_GEN] First user message: '{msg_display}'")
+    else:
+        logger.info("[TITLE_GEN] No user message found")
+        
     if not first_msg:
+        logger.info("[TITLE_GEN] No user message, returning 'CHT'")
         return jsonify({"title": "CHT"})
         
-    prompt = f"Summarize this text into exactly 3 uppercase letters that represent the topic. Do not include explanation. Text: {first_msg[:100]}"
+    # Use a simpler, non-reasoning model for title generation
+    title_model = "nvidia/nemotron-3-nano-30b-a3b:free"
+    
+    prompt = f"Generate a very short title (max 4 words) for this conversation. Only reply with the title. Conversation: {first_msg[:100]}"
+    logger.info(f"[TITLE_GEN] Calling OpenAI with model: {title_model}...")
     
     try:
-        response = client.chat.completions.create(
-            model=MODEL,
+        response = openai_client.chat.completions.create(
+            model=title_model,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=5
+            max_tokens=20
         )
-        title = response.choices[0].message.content.strip().replace(".", "").upper()[:3]
+        # Handle different response formats (reasoning models may return content differently)
+        message = response.choices[0].message
+        title = (message.content or "").strip()
+        
+        # If content is empty, try reasoning_content (for reasoning models)
+        if not title and hasattr(message, 'reasoning_content') and message.reasoning_content:
+            title = message.reasoning_content.strip()
+            logger.info(f"[TITLE_GEN] Using reasoning_content: '{title}'")
+        
+        # If still empty, generate a simple fallback
+        if not title:
+            # Create a simple title from the first message
+            words = first_msg.split()[:4]
+            title = " ".join(words).capitalize()
+            if len(first_msg) > 4:
+                title += "..."
+            logger.info(f"[TITLE_GEN] Generated fallback title: '{title}'")
+        else:
+            logger.info(f"[TITLE_GEN] OpenAI returned title: '{title}'")
+        
         return jsonify({"title": title})
-    except:
+    except Exception as e:
+        logger.error(f"[TITLE_GEN] OpenAI API error: {str(e)}")
         return jsonify({"title": "CHT"})
 
 

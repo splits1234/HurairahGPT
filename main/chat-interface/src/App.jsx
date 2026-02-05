@@ -1,11 +1,11 @@
 /**
  * HurairahGPT - Main Chat Application Component
  * =============================================
- * 
+ *
  * This is the primary application component for the HurairahGPT chat interface.
  * It manages the overall application state including user sessions, chat history,
  * theme preferences, and AI personality settings.
- * 
+ *
  * Features:
  * - AI assistant Real-time chat with
  * - Multiple chat sessions management
@@ -13,18 +13,19 @@
  * - Theme toggle (dark/light mode)
  * - AI personality selection
  * - Chat export functionality
- * 
+ * - Dynamic title management
+ *
  * @version 1.0.0
  * @author Hurairah (Solo Developer)
  * @email hurairahgpt.devteam@gmail.com
  * @website talktohurairah.com
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sidebar } from './components/Sidebar';
 import { InputBar } from './components/InputBar';
-import { Download, Trash, Settings } from 'lucide-react';
+import { Download, Trash, Settings, Sparkles } from 'lucide-react';
 import styles from './App.module.css';
 
 /**
@@ -32,6 +33,8 @@ import styles from './App.module.css';
  * 
  * Defines the available AI personalities that users can choose from.
  * Each personality has a distinct communication style and expertise.
+ * 
+ * @debug - PERSONALITIES constant - potential source of 'C' TDZ error
  */
 const PERSONALITIES = {
   "default": "Default",
@@ -39,6 +42,9 @@ const PERSONALITIES = {
   "islamic": "Islamic",
   "coder": "Coder"
 };
+
+// Debug log to verify PERSONALITIES is defined at module load time
+console.log('[DEBUG] PERSONALITIES constant loaded:', Object.keys(PERSONALITIES));
 
 /**
  * Application State Interfaces
@@ -82,6 +88,19 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [personality, setPersonality] = useState('default');
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [currentTitle, setCurrentTitle] = useState('HurairahGPT Dive in on to wonders');
+  const [isTitleGenerating, setIsTitleGenerating] = useState(false);
+  const [chatCount, setChatCount] = useState(1);
+
+  // Ref for tracking if this is a new untitled chat
+  const isNewUnnamedChat = useRef(false);
+
+  /**
+   * Update document title when current title changes
+   */
+  useEffect(() => {
+    document.title = currentTitle || 'HurairahGPT Dive in on to wonders';
+  }, [currentTitle]);
 
   /**
    * Initialize application by fetching user data from server
@@ -112,11 +131,29 @@ function App() {
         
         // Update application state with fetched data
         setUser(data.user);
-        setSessions(data.sessions);
+        setSessions(data.sessions || {});
         setActiveSessionId(data.active_session_id);
-        setChatHistory(data.history);
+        setChatHistory(data.history || []);
         setPersonality(data.user.personality || 'default');
         setIsLoading(false);
+
+        // Calculate total chat count for sequential naming
+        const totalChats = Object.keys(data.sessions || {}).length;
+        setChatCount(totalChats + 1);
+
+        // Update current title from active session or set placeholder
+        if (data.active_session_id && data.sessions[data.active_session_id]) {
+          const activeSession = data.sessions[data.active_session_id];
+          if (activeSession.name && !activeSession.name.startsWith('Chat ')) {
+            setCurrentTitle(activeSession.name);
+          } else {
+            setCurrentTitle('HurairahGPT Dive in on to wonders');
+            isNewUnnamedChat.current = true;
+          }
+        } else {
+          setCurrentTitle('HurairahGPT Dive in on to wonders');
+          isNewUnnamedChat.current = true;
+        }
 
         // Apply saved theme to document
         if (data.user.theme) {
@@ -130,6 +167,37 @@ function App() {
 
     fetchInitialData();
   }, []);
+
+  /**
+   * Generate a title for a chat session using AI
+   * 
+   * @param {string} sessionId - The session to generate title for
+   * @param {Message[]} currentHistory - Chat history for context
+   */
+  const generateSessionTitle = useCallback(async (sessionId, currentHistory) => {
+    setIsTitleGenerating(true);
+    try {
+      const response = await fetch('/api/generate_title', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history: currentHistory })
+      });
+
+      const data = await response.json();
+      
+      if (data.title) {
+        renameSession(sessionId, data.title);
+        // Update current title immediately for UI feedback
+        if (sessionId === activeSessionId) {
+          setCurrentTitle(data.title);
+        }
+      }
+    } catch (error) {
+      console.error("Title generation error:", error);
+    } finally {
+      setIsTitleGenerating(false);
+    }
+  }, [activeSessionId]);
 
   /**
    * Send a message to the AI and receive a response
@@ -148,6 +216,7 @@ function App() {
 
     // Check if this is the first message of a new session
     const currentSession = sessions[activeSessionId];
+    
     const isFirstMessage = (
       (!currentSession?.history || currentSession.history.length === 0) && 
       chatHistory.length === 0
@@ -181,7 +250,6 @@ function App() {
       if (isFirstMessage) {
         generateSessionTitle(activeSessionId, [temporaryMessage]);
       }
-
     } catch (error) {
       console.error("Chat error:", error);
       // Show error message in chat
@@ -191,30 +259,7 @@ function App() {
         error: true 
       }]);
     }
-  }, [sessions, activeSessionId, chatHistory]);
-
-  /**
-   * Generate a title for a chat session using AI
-   * 
-   * @param {string} sessionId - The session to generate title for
-   * @param {Message[]} currentHistory - Chat history for context
-   */
-  const generateSessionTitle = useCallback(async (sessionId, currentHistory) => {
-    try {
-      const response = await fetch('/api/generate_title', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history: currentHistory })
-      });
-
-      const data = await response.json();
-      if (data.title) {
-        renameSession(sessionId, data.title);
-      }
-    } catch (error) {
-      console.error("Title generation error:", error);
-    }
-  }, []);
+  }, [sessions, activeSessionId, chatHistory, generateSessionTitle]);
 
   /**
    * Switch to a different chat session
@@ -233,6 +278,17 @@ function App() {
       if (data.success) {
         setActiveSessionId(sessionId);
         setChatHistory(data.history);
+        // Update current title based on the session
+        if (data.sessions[sessionId]) {
+          const sessionName = data.sessions[sessionId].name;
+          if (sessionName && !sessionName.startsWith('Chat ')) {
+            setCurrentTitle(sessionName);
+            isNewUnnamedChat.current = false;
+          } else {
+            setCurrentTitle('HurairahGPT Dive in on to wonders');
+            isNewUnnamedChat.current = true;
+          }
+        }
       }
     } catch (error) {
       console.error("Session switch error:", error);
@@ -244,22 +300,31 @@ function App() {
    */
   const handleCreateNewChat = useCallback(async () => {
     try {
+      // Generate sequential name for the new chat
+      const sequentialName = `Chat ${chatCount}`;
+      
       const response = await fetch('/sessions/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
+        body: JSON.stringify({ name: sequentialName })
       });
 
       const data = await response.json();
+      
       if (data.success) {
         setSessions(data.sessions);
         setActiveSessionId(data.session_id);
         setChatHistory([]);
+        // Set the placeholder title for new chats
+        setCurrentTitle('HurairahGPT Dive in on to wonders');
+        isNewUnnamedChat.current = true;
+        // Increment chat count for next sequential name
+        setChatCount(prev => prev + 1);
       }
     } catch (error) {
       console.error("Create chat error:", error);
     }
-  }, []);
+  }, [chatCount]);
 
   /**
    * Delete a chat session
@@ -304,11 +369,16 @@ function App() {
       const data = await response.json();
       if (data.sessions) {
         setSessions(data.sessions);
+        // Update current title if this is the active session
+        if (sessionId === activeSessionId) {
+          setCurrentTitle(newName);
+          isNewUnnamedChat.current = false;
+        }
       }
     } catch (error) {
       console.error("Rename session error:", error);
     }
-  }, []);
+  }, [activeSessionId]);
 
   /**
    * Clear all messages from the current chat
@@ -421,6 +491,33 @@ function App() {
           </button>
         </div>
 
+        {/* Title Bar - Dynamic Chat Title */}
+        <div className={styles.titleBar}>
+          <AnimatePresence mode="wait">
+            {isTitleGenerating ? (
+              <motion.div
+                className={styles.titleLoading}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <Sparkles size={14} className={styles.sparkleIcon} />
+                <span>Generating title...</span>
+              </motion.div>
+            ) : (
+              <motion.h2
+                className={styles.chatTitle}
+                key={currentTitle}
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {currentTitle}
+              </motion.h2>
+            )}
+          </AnimatePresence>
+        </div>
+
         {/* Chat Content Area */}
         <div 
           className={styles.contentWrapper}
@@ -460,12 +557,6 @@ function App() {
                     <div className={`${styles.messageBubble} ${message.error ? styles.errorBubble : ''}`}>
                       {message.content}
                     </div>
-                    <span className={styles.messageTime}>
-                      {new Date(message.time).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </span>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -474,7 +565,7 @@ function App() {
 
           {/* Input Bar */}
           <div className={styles.inputContainer}>
-            <InputBar onSend={handleSendMessage} />
+            <InputBar onSend={handleSendMessage} onNewChat={handleCreateNewChat} />
           </div>
         </div>
       </main>

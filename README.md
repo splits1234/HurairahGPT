@@ -483,22 +483,22 @@ Content-Type: application/json
                              │
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Flask Application                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │  Templates   │  │   REST API   │  │  Static Files    │  │
-│  └──────┬───────┘  └──────┬───────┘  └──────────────────┘  │
+│                    Flask Application                        |
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │
+│  │  Templates   │  │   REST API   │  │  Static Files    │   │
+│  └──────┬───────┘  └──────┬───────┘  └──────────────────┘   │
 │         │                 │                                 │
 │         ▼                 ▼                                 │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │              Session Management                      │   │
-│  │         (users.json / credentials.txt)               │   │
-│  └────────────────────┬──────────────────────────────────┘   │
-│                       │                                      │
-│                       ▼                                      │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │              OpenRouter API                          │   │
-│  │   (Chat Completions / Image Generation)              │   │
-│  └─────────────────────────────────────────────────────┘   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │                  Session Management                   │  │
+│  │             (users.json / credentials.txt)            │  │
+│  └──────────────────────────┬────────────────────────────┘  │
+│                             │                               │
+│                             ▼                               │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │                   OpenRouter API                    │    │
+│  │       (Chat Completions / Image Generation)         │    │
+│  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -576,11 +576,11 @@ Content-Type: application/json
 
 ## User Tier System
 
-| Tier | Images/8hrs | Price | Features |
-|------|-------------|-------|----------|
-| Free | 2 | $0 | Basic image generation |
-| Premium | 10 | $9.99/mo | Enhanced limits |
-| Unlimited | 100 | $19.99/mo | Maximum access |
+| Tier      | Images/8hrs |   Price   |        Features        |
+|-----------|-------------|-----------|------------------------|
+|   Free    |      2      |    $0     | Basic image generation |
+|  Premium  |     10      |  $9.99/mo |     Enhanced limits    |
+| Unlimited |     100     | $19.99/mo |     Maximum access     |
 
 ### Reset Schedule
 Image generation limits reset every 8 hours from the first usage.
