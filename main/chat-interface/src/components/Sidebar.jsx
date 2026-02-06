@@ -233,24 +233,22 @@ export function Sidebar({
               <span className={styles.userStatus}>Online</span>
             </div>
           </div>
-        </div>
-
-        <div className={styles.footerActions}>
-          {/* Theme Toggle */}
-          <ThemeToggle />
-
-          {/* Logout Button */}
-          <motion.button
-            className={styles.logoutButton}
-            onClick={() => window.location.href = '/logout'}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            title="Log Out"
-            aria-label="Log out of your account"
-            type="button"
-          >
-            <LogOut size={18} />
-          </motion.button>
+          
+          {/* Theme Toggle & Logout - Inline with user info */}
+          <div className={styles.inlineActions}>
+            <ThemeToggle />
+            <motion.button
+              className={styles.logoutButton}
+              onClick={() => window.location.href = '/logout'}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="Log Out"
+              aria-label="Log out of your account"
+              type="button"
+            >
+              <LogOut size={18} />
+            </motion.button>
+          </div>
         </div>
       </footer>
     </aside>

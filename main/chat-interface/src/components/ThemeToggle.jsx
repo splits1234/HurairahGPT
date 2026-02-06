@@ -52,7 +52,7 @@ export function ThemeToggle() {
         }}
         transition={{ duration: 0.3 }}
       >
-        <Moon size={20} />
+        <Moon size={18} />
       </motion.div>
 
       {/* Sun Icon - Visible in Light Mode */}
@@ -65,7 +65,7 @@ export function ThemeToggle() {
         }}
         transition={{ duration: 0.3 }}
       >
-        <Sun size={20} />
+        <Sun size={18} />
       </motion.div>
     </motion.button>
   );

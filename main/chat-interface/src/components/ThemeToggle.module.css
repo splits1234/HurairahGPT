@@ -1,15 +1,27 @@
-.toggleBtn {
+.toggleButton {
     position: relative;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: transparent;
-    transition: background-color 0.2s ease;
+    border: 1px solid var(--border-subtle);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    color: var(--text-secondary);
 }
 
-.toggleBtn:hover {
+.toggleButton:hover {
     background-color: var(--bg-surface);
+    color: var(--text-primary);
+    border-color: var(--border-medium);
+}
+
+.toggleButton:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-primary);
+    border-color: var(--accent-primary);
 }

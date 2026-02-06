@@ -88,7 +88,7 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [personality, setPersonality] = useState('default');
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
-  const [currentTitle, setCurrentTitle] = useState('HurairahGPT Dive in on to wonders');
+  const [currentTitle, setCurrentTitle] = useState('HurairahGPT');
   const [isTitleGenerating, setIsTitleGenerating] = useState(false);
   const [chatCount, setChatCount] = useState(1);
 
@@ -99,7 +99,7 @@ function App() {
    * Update document title when current title changes
    */
   useEffect(() => {
-    document.title = currentTitle || 'HurairahGPT Dive in on to wonders';
+    document.title = currentTitle || 'HurairahGPT';
   }, [currentTitle]);
 
   /**
@@ -147,11 +147,11 @@ function App() {
           if (activeSession.name && !activeSession.name.startsWith('Chat ')) {
             setCurrentTitle(activeSession.name);
           } else {
-            setCurrentTitle('HurairahGPT Dive in on to wonders');
+            setCurrentTitle('HurairahGPT');
             isNewUnnamedChat.current = true;
           }
         } else {
-          setCurrentTitle('HurairahGPT Dive in on to wonders');
+          setCurrentTitle('HurairahGPT');
           isNewUnnamedChat.current = true;
         }
 
@@ -285,7 +285,7 @@ function App() {
             setCurrentTitle(sessionName);
             isNewUnnamedChat.current = false;
           } else {
-            setCurrentTitle('HurairahGPT Dive in on to wonders');
+            setCurrentTitle('HurairahGPT');
             isNewUnnamedChat.current = true;
           }
         }
@@ -316,10 +316,12 @@ function App() {
         setActiveSessionId(data.session_id);
         setChatHistory([]);
         // Set the placeholder title for new chats
-        setCurrentTitle('HurairahGPT Dive in on to wonders');
         isNewUnnamedChat.current = true;
         // Increment chat count for next sequential name
         setChatCount(prev => prev + 1);
+        
+        // Refresh the page after creating new chat
+        window.location.reload();
       }
     } catch (error) {
       console.error("Create chat error:", error);
@@ -535,7 +537,7 @@ function App() {
                 className={styles.logoContainer}
               >
                 <h1 className={styles.logo}>HurairahGPT</h1>
-                <p className={styles.tagline}>Your AI Assistant</p>
+                <p className={styles.tagline}></p>
               </motion.div>
             )}
           </AnimatePresence>

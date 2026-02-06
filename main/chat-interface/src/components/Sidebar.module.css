@@ -123,16 +123,65 @@
 
 /* Footer */
 .footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     padding-top: 16px;
     border-top: 1px solid var(--border-subtle);
 }
 
+.userProfile {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
 .userInfo {
     display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.inlineActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: var(--text-primary);
+    border: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+
+.userDetails {
+    display: flex;
     flex-direction: column;
+    gap: 2px;
+}
+
+.userStatus {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.userStatus::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #22c55e;
 }
 
 .userName {
@@ -141,23 +190,29 @@
     color: var(--text-primary);
 }
 
-.footerActions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.logoutBtn {
-    color: var(--text-secondary);
+.logoutButton {
+    width: 36px;
+    height: 36px;
     padding: 8px;
-    border-radius: 50%;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background-color: transparent;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
 }
 
-.logoutBtn:hover {
+.logoutButton:hover {
     background-color: var(--bg-surface);
     color: var(--text-primary);
+    border-color: var(--border-medium);
+}
+
+.logoutButton:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-primary);
+    border-color: var(--accent-primary);
 }
