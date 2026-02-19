@@ -66,16 +66,114 @@
       },
       "acb91ad6-13e8-436e-89fb-47c0a361aafa": {
         "name": "Chat 5",
-        "history": [],
+        "history": [
+          {
+            "content": "hello",
+            "sender": "user",
+            "time": "2026-02-07 15:29:06"
+          },
+          {
+            "content": "AI service unavailable, please try again later.",
+            "sender": "bot",
+            "time": "2026-02-07 15:29:06"
+          }
+        ],
         "created": "2026-02-05 16:07:11"
+      },
+      "8458fc56-5f55-4662-bcac-ca96755ce512": {
+        "name": "Helllo...",
+        "history": [
+          {
+            "content": "helllo",
+            "sender": "user",
+            "time": "2026-02-07 15:39:04"
+          },
+          {
+            "content": "AI service unavailable, please try again later.",
+            "sender": "bot",
+            "time": "2026-02-07 15:39:04"
+          }
+        ],
+        "created": "2026-02-07 15:38:53"
+      },
+      "f405046b-db2c-447a-82e4-a5bef7e16ea4": {
+        "name": "Helllo...",
+        "history": [
+          {
+            "content": "helllo",
+            "sender": "user",
+            "time": "2026-02-07 15:59:55"
+          },
+          {
+            "content": "AI service unavailable, please try again later.",
+            "sender": "bot",
+            "time": "2026-02-07 15:59:55"
+          }
+        ],
+        "created": "2026-02-07 15:59:48"
+      },
+      "f7b8e7e2-4b73-4204-95a0-488419546e5f": {
+        "name": "Hello...",
+        "history": [
+          {
+            "content": "hello",
+            "sender": "user",
+            "time": "2026-02-07 16:44:05"
+          },
+          {
+            "content": "AI service unavailable, please try again later.",
+            "sender": "bot",
+            "time": "2026-02-07 16:44:05"
+          }
+        ],
+        "created": "2026-02-07 16:44:01"
+      },
+      "ef6019f6-ae49-46b6-a870-4cd96b239ec3": {
+        "name": "Hello...",
+        "history": [
+          {
+            "content": "hello",
+            "sender": "user",
+            "time": "2026-02-07 16:49:58"
+          },
+          {
+            "content": "Hello! How can I help you today?",
+            "sender": "bot",
+            "time": "2026-02-07 16:49:58"
+          }
+        ],
+        "created": "2026-02-07 16:49:55"
+      },
+      "ec9944e6-bb19-4ad4-9d80-1820042a0d12": {
+        "name": "Chat 10",
+        "history": [],
+        "created": "2026-02-07 16:53:43"
       }
     },
-    "active_session": "acb91ad6-13e8-436e-89fb-47c0a361aafa",
+    "active_session": "ec9944e6-bb19-4ad4-9d80-1820042a0d12",
     "theme": "dark",
     "personality": "default",
     "tier": "free",
     "image_usage": {
       "last_reset": "2026-02-05T12:26:43.204320",
+      "count": 0
+    },
+    "upgrade_history": []
+  },
+  "gmail@gmail.com": {
+    "sessions": {
+      "b94bff25-9dd2-4098-9a66-6a303a7b98eb": {
+        "name": "Chat 1",
+        "history": [],
+        "created": "2026-02-07 17:16:02"
+      }
+    },
+    "active_session": "b94bff25-9dd2-4098-9a66-6a303a7b98eb",
+    "theme": "dark",
+    "personality": "default",
+    "tier": "free",
+    "image_usage": {
+      "last_reset": "2026-02-07T17:16:02.027689",
       "count": 0
     },
     "upgrade_history": []

@@ -1,39 +1,60 @@
-.toggleButton {
-    position: relative;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: transparent;
-    border: 1px solid var(--border-subtle);
-    transition: all 0.2s ease;
-    cursor: pointer;
-    color: var(--text-secondary);
+/* From Uiverse.io by alexruix */
+/* The switch - the box around the slider */
+.switch {
+  font-size: 17px;
+  position: relative;
+  display: inline-block;
+  width: 3.5em;
+  height: 2em;
+  cursor: pointer;
 }
 
-.toggleButton:hover {
-    background-color: var(--bg-surface);
-    color: var(--text-primary);
-    border-color: var(--border-medium);
+/* Hide default HTML checkbox */
+.checkbox {
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
 
-.toggleButton:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--accent-primary);
-    border-color: var(--accent-primary);
+/* The slider */
+.slider {
+  --background: #28096b;
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--background);
+  transition: 0.5s;
+  border-radius: 30px;
 }
 
-.moonIcon,
-.sunIcon {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 1.4em;
+  width: 1.4em;
+  border-radius: 50%;
+  left: 10%;
+  bottom: 15%;
+  box-shadow: inset 8px -4px 0px 0px #fff000;
+  background: var(--background);
+  transition: 0.5s;
+}
+
+/* Checked state (light mode) */
+.checkbox:checked + .slider {
+  background-color: #522ba7;
+}
+
+.checkbox:checked + .slider:before {
+  transform: translateX(100%);
+  box-shadow: inset 15px -4px 0px 15px #fff000;
+}
+
+/* Focus state for accessibility */
+.switch:focus-within .slider {
+  outline: 2px solid var(--accent-primary, #522ba7);
+  outline-offset: 2px;
 }

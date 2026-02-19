@@ -205,7 +205,7 @@ openai_client = OpenAI(
 )
 
 # AI Model Configuration
-CHAT_MODEL: str = "deepseek/deepseek-r1-0528:free"
+CHAT_MODEL: str = "nvidia/nemotron-3-nano-30b-a3b:free"
 IMAGE_MODEL: str = "bytedance-seed/seedream-4.5"
 
 # =============================================================================
